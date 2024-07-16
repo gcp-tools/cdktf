@@ -1,0 +1,68 @@
+{
+  "name": "@gcp-tools/cdktf",
+  "author": "si@ibrokethat.com",
+  "description": "GCP Tools | project | infrastructure",
+  "license": "Apache-2.0",
+  "type": "module",
+  "version": "0.0.0",
+  "exports": {
+    "./constructs": {
+      "default": "./dist/constructs/index.mjs",
+      "types": "./dist/constructs/index.d.mts"
+    },
+    "./stacks/app": {
+      "default": "./dist/stacks/app-stack.mjs",
+      "types": "./dist/stacks/app-stack.d.mts"
+    },
+    "./stacks/infrastructure": {
+      "default": "./dist/stacks/infrastructure/index.mjs",
+      "types": "./dist/stacks/infrastructure/index.d.mts"
+    },
+    "./stacks/projects": {
+      "default": "./dist/stacks/projects/index.mjs",
+      "types": "./dist/stacks/projects/index.d.mts"
+    },
+    "./utils": {
+      "default": "./dist/utils/index.mjs",
+      "types": "./dist/utils/index.d.mts"
+    }
+
+  },
+  "scripts": {
+    "build": "tsc --pretty",
+    "clean": "rm -rf coverage dist",
+    "lint": "biome check src --write",
+    "prepare": "husky",
+    "test": "jest --config jest.config.mjs --passWithNoTests",
+    "upgrade": "npm i cdktf@latest",
+    "upgrade:next": "npm i cdktf@next"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@biomejs/biome": "1.8.1",
+    "@cdktf/provider-archive": "^10.0.1",
+    "@cdktf/provider-google": "^13.13.0",
+    "@cdktf/provider-local": "^10.1.0",
+    "@cdktf/provider-random": "^11.0.2",
+    "@sinclair/typebox": "0.32.32",
+    "cdktf": "^0.20.7",
+    "constructs": "^10.3.0",
+    "husky": "^9.0.10",
+    "lint-staged": "^15.2.2",
+    "ts-node": "10.9.2"
+  },
+  "engines": {
+    "node": ">=20.12.2",
+    "npm": ">=10.5.0"
+  },
+  "publishConfig": {
+    "registry": "https://tbc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://tbc"
+  },
+  "lint-staged": {
+    "*": ["biome check --no-errors-on-unmatched --files-ignore-unknown=true write"]
+  }
+}
