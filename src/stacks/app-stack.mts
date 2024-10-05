@@ -10,7 +10,7 @@ import type { Construct } from 'constructs'
 import { BaseStack, type BaseStackConfig } from './base-stack.mjs'
 import { envConfig } from '../utils/env.mjs'
 
-export class AppStack<T> extends BaseStack<BaseStackConfig> {
+export class AppStack extends BaseStack<BaseStackConfig> {
   protected dbInstanceId: string
   protected dbProjectId: string
   protected appRemoteState: DataTerraformRemoteStateGcs
@@ -26,9 +26,8 @@ export class AppStack<T> extends BaseStack<BaseStackConfig> {
   public vpcConnectorId: string
   public vpcProjectId: string
 
-  constructor(scope: Construct, id: string, appConfig: T) {
+  constructor(scope: Construct, id: string) {
     super(scope, id, 'app', {
-      ...appConfig,
       user: envConfig.user
     })
 

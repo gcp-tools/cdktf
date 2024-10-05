@@ -34,7 +34,7 @@ export class HttpConstruct<
   protected invoker: CloudRunServiceIamBinding
   public fn: Cloudfunctions2Function
 
-  constructor(scope: AppStack<T>, id: string, config: T) {
+  constructor(scope: AppStack, id: string, config: T) {
     super(scope, id, config)
 
     const sourceDir = resolve(sourceDirectory, id, 'dist')

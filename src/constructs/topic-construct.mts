@@ -16,7 +16,7 @@ export class Topic extends BaseConstruct<TopicConfig> {
   protected iamBinding: PubsubTopicIamBinding
   protected iamBindingError: PubsubTopicIamBinding
 
-  protected constructor(scope: AppStack<TopicConfig>, id: string, config: TopicConfig) {
+  protected constructor(scope: AppStack, id: string, config: TopicConfig) {
     super(scope, id, config)
 
     const topicId = this.id('topic')
