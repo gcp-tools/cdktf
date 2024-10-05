@@ -6,7 +6,7 @@ import { SqlDatabaseInstance } from '@cdktf/provider-google/lib/sql-database-ins
 import { SqlDatabase } from '@cdktf/provider-google/lib/sql-database/index.js'
 import { StringResource } from '@cdktf/provider-random/lib/string-resource/index.js'
 import { DataTerraformRemoteStateGcs, TerraformOutput } from 'cdktf'
-import type { Construct } from 'constructs'
+import { App } from 'cdktf'
 import { InfraStack } from '../infra-stack.mjs'
 import { envVars } from '../../utils/env.mjs'
 export type SqlStackConfig = {}
@@ -24,7 +24,7 @@ export class SqlStack extends InfraStack<SqlStackConfig> {
   protected hostRemoteState: DataTerraformRemoteStateGcs
   protected networkRemoteState: DataTerraformRemoteStateGcs
 
-  constructor(scope: Construct, config: SqlStackConfig) {
+  constructor(scope: App, config: SqlStackConfig) {
     super(scope, 'sql', config)
 
     this.hostRemoteState = new DataTerraformRemoteStateGcs(

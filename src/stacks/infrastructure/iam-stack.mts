@@ -2,7 +2,7 @@ import { ProjectIamBinding } from '@cdktf/provider-google/lib/project-iam-bindin
 import { ProjectIamMember } from '@cdktf/provider-google/lib/project-iam-member/index.js'
 import { StorageBucketIamBinding } from '@cdktf/provider-google/lib/storage-bucket-iam-binding/index.js'
 import { DataTerraformRemoteStateGcs } from 'cdktf'
-import type { Construct } from 'constructs'
+import { App } from 'cdktf'
 import { InfraStack } from '../infra-stack.mjs'
 import { envVars } from '../../utils/env.mjs'
 export type IamStackConfig = {}
@@ -25,7 +25,7 @@ export class IamStack extends InfraStack<IamStackConfig> {
   public projectNumber: string
   public vpcProjectId: string
 
-  constructor(scope: Construct, config: IamStackConfig) {
+  constructor(scope: App, config: IamStackConfig) {
     super(scope, 'iam', config)
 
     this.appRemoteState = new DataTerraformRemoteStateGcs(

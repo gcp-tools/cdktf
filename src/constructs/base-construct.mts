@@ -1,9 +1,7 @@
 import { Construct } from 'constructs'
 import type { AppStack } from '../stacks/app-stack.mjs'
 
-export type BaseConstructConfig = Record<string, unknown>
-
-export class BaseConstruct<T extends BaseConstructConfig> extends Construct {
+export class BaseConstruct<T> extends Construct {
   protected constructConfig: T
   protected constructId: string
   protected constructScope: AppStack

@@ -15,7 +15,7 @@ import { StorageBucketObject } from '@cdktf/provider-google/lib/storage-bucket-o
 import { StorageBucket } from '@cdktf/provider-google/lib/storage-bucket/index.js'
 import type { ITerraformDependable } from 'cdktf'
 import type { AppStack } from '../../stacks/app-stack.mjs'
-import { BaseConstruct, type BaseConstructConfig } from '../base-construct.mjs'
+import { BaseConstruct } from '../base-construct.mjs'
 import { envConfig } from '../../utils/env.mjs'
 const sourceDirectory = resolve(
   relative(cwd(), dirname(fileURLToPath(import.meta.url))),
@@ -23,7 +23,7 @@ const sourceDirectory = resolve(
   'deploy',
 )
 
-export type CloudEventConstructConfig = BaseConstructConfig & {
+export type CloudEventConstructConfig = {
   buildConfig: Partial<Cloudfunctions2FunctionBuildConfig>
   dependsOn?: ITerraformDependable[]
   eventTrigger: Cloudfunctions2FunctionEventTrigger

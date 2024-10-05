@@ -6,7 +6,7 @@ import { ComputeSharedVpcServiceProject } from '@cdktf/provider-google/lib/compu
 import { ComputeSubnetwork } from '@cdktf/provider-google/lib/compute-subnetwork/index.js'
 import { VpcAccessConnector } from '@cdktf/provider-google/lib/vpc-access-connector/index.js'
 import { DataTerraformRemoteStateGcs, TerraformOutput } from 'cdktf'
-import type { Construct } from 'constructs'
+import { App } from 'cdktf'
 import { InfraStack } from '../infra-stack.mjs'
 import { envVars } from '../../utils/env.mjs'
 
@@ -26,7 +26,7 @@ export class NetworkStack extends InfraStack<NetworkStackConfig> {
   protected privateSecondaryIp: ComputeSubnetwork
   protected vpc: ComputeNetwork
 
-  constructor(scope: Construct, config: NetworkStackConfig) {
+  constructor(scope: App, config: NetworkStackConfig) {
     super(scope, 'network', config)
 
     this.hostRemoteState = new DataTerraformRemoteStateGcs(

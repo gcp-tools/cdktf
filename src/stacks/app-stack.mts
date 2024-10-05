@@ -6,7 +6,7 @@ import { SecretManagerSecret } from '@cdktf/provider-google/lib/secret-manager-s
 import { ServiceAccount } from '@cdktf/provider-google/lib/service-account/index.js'
 import { Password } from '@cdktf/provider-random/lib/password/index.js'
 import { DataTerraformRemoteStateGcs } from 'cdktf'
-import type { Construct } from 'constructs'
+import { App } from 'cdktf'
 import { BaseStack, type BaseStackConfig } from './base-stack.mjs'
 import { envConfig } from '../utils/env.mjs'
 
@@ -26,7 +26,7 @@ export class AppStack extends BaseStack<BaseStackConfig> {
   public vpcConnectorId: string
   public vpcProjectId: string
 
-  constructor(scope: Construct, id: string) {
+  constructor(scope: App, id: string) {
     super(scope, id, 'app', {
       user: envConfig.user
     })
