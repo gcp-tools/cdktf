@@ -5,16 +5,10 @@ import { StringResource } from '@cdktf/provider-random/lib/string-resource/index
 import { TerraformOutput } from 'cdktf'
 import type { Construct } from 'constructs'
 import { BaseStack, type BaseStackConfig } from './base-stack.mjs'
-import { envVars } from '../utils/env.mjs'
+import { envConfig } from '../utils/env.mjs'
 
 export type ProjectStackConfig = {
   apis: string[]
-}
-
-const envConfig = {
-  billingAccount: envVars.GCP_TOOLS_BILLING_ACCOUNT,
-  orgId: envVars.GCP_TOOLS_ORG_ID,
-  owners: envVars.GCP_TOOLS_OWNER_EMAILS,
 }
 
 export class ProjectStack extends BaseStack<BaseStackConfig> {

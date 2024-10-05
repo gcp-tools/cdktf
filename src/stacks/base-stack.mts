@@ -2,23 +2,12 @@ import { GoogleProvider } from '@cdktf/provider-google/lib/provider/index.js'
 import { RandomProvider } from '@cdktf/provider-random/lib/provider/index.js'
 import { GcsBackend, TerraformStack } from 'cdktf'
 import type { Construct } from 'constructs'
-
-import { envVars } from '../utils/env.mjs'
+import { envConfig } from '../utils/env.mjs'
 
 export type StackType = 'project' | 'infra' | 'app'
 export type BaseStackConfig = {
   user: string
 }
-
-const envConfig = {
-  bucket: envVars.GCP_TOOLS_TERRAFORM_REMOTE_STATE_BUCKET_ID,
-  environment: envVars.GCP_TOOLS_ENVIRONMENT,
-  region: envVars.GCP_TOOLS_REGION,
-  billingAccount: envVars.GCP_TOOLS_BILLING_ACCOUNT,
-  orgId: envVars.GCP_TOOLS_ORG_ID,
-  owners: envVars.GCP_TOOLS_OWNER_EMAILS,
-}
-
 
 export class BaseStack<T extends BaseStackConfig> extends TerraformStack {
   public stackConfig: T

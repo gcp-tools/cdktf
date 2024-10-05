@@ -13,7 +13,7 @@ import { StorageBucket } from '@cdktf/provider-google/lib/storage-bucket/index.j
 import type { ITerraformDependable } from 'cdktf'
 import type { AppStack } from '../../stacks/app-stack.mjs'
 import { BaseConstruct, type BaseConstructConfig } from '../base-construct.mjs'
-import { envVars } from '../../utils/env.mjs'
+import { envConfig } from '../../utils/env.mjs'
 const sourceDirectory = resolve(cwd(), '..', 'services')
 
 export type HttpConstructConfig = BaseConstructConfig & {
@@ -23,9 +23,6 @@ export type HttpConstructConfig = BaseConstructConfig & {
   serviceConfig: Partial<Cloudfunctions2FunctionServiceConfig>
 }
 
-const envConfig = {
-  region: envVars.GCP_TOOLS_REGION,
-}
 
 export class HttpConstruct<
   T extends HttpConstructConfig,

@@ -8,14 +8,7 @@ import { Password } from '@cdktf/provider-random/lib/password/index.js'
 import { DataTerraformRemoteStateGcs } from 'cdktf'
 import type { Construct } from 'constructs'
 import { BaseStack, type BaseStackConfig } from './base-stack.mjs'
-import { envVars } from '../utils/env.mjs'
-
-const envConfig = {
-  bucket: envVars.GCP_TOOLS_TERRAFORM_REMOTE_STATE_BUCKET_ID,
-  environment: envVars.GCP_TOOLS_ENVIRONMENT,
-  region: envVars.GCP_TOOLS_REGION,
-  user: envVars.GCP_TOOLS_USER,
-}
+import { envConfig } from '../utils/env.mjs'
 
 export class AppStack<T> extends BaseStack<BaseStackConfig> {
   protected dbInstanceId: string

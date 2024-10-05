@@ -16,7 +16,7 @@ import { StorageBucket } from '@cdktf/provider-google/lib/storage-bucket/index.j
 import type { ITerraformDependable } from 'cdktf'
 import type { AppStack } from '../../stacks/app-stack.mjs'
 import { BaseConstruct, type BaseConstructConfig } from '../base-construct.mjs'
-import { envVars } from '../../utils/env.mjs'
+import { envConfig } from '../../utils/env.mjs'
 const sourceDirectory = resolve(
   relative(cwd(), dirname(fileURLToPath(import.meta.url))),
   '..',
@@ -30,10 +30,6 @@ export type CloudEventConstructConfig = BaseConstructConfig & {
   grantInvokerPermissions?: string[]
   serviceConfig: Partial<Cloudfunctions2FunctionServiceConfig>
   vpcConnector: DataGoogleVpcAccessConnector //  get from AppStack
-}
-
-const envConfig = {
-  region: envVars.GCP_TOOLS_REGION,
 }
 
 export class CloudFunctionConstruct<
