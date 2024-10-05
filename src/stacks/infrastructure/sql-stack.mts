@@ -7,11 +7,16 @@ import { SqlDatabase } from '@cdktf/provider-google/lib/sql-database/index.js'
 import { StringResource } from '@cdktf/provider-random/lib/string-resource/index.js'
 import { DataTerraformRemoteStateGcs, TerraformOutput } from 'cdktf'
 import type { Construct } from 'constructs'
-import { InfraStack, type InfraStackConfig } from '../infra-stack.mjs'
+import { InfraStack } from '../infra-stack.mjs'
+import { envVars } from '../../utils/env.mjs'
+export type SqlStackConfig = {}
 
-export type SqlStackConfig = InfraStackConfig & {}
+const envConfig = {
+  bucket: envVars.GCP_TOOLS_TERRAFORM_REMOTE_STATE_BUCKET_ID,
+  region: envVars.GCP_TOOLS_REGION,
+}
 
-export class SqlStack extends InfraStack {
+export class SqlStack extends InfraStack<SqlStackConfig> {
   protected db: SqlDatabaseInstance
   protected dbConnection: ServiceNetworkingConnection
   protected dbRemoteState: DataTerraformRemoteStateGcs
@@ -26,7 +31,7 @@ export class SqlStack extends InfraStack {
       this,
       this.id('remote', 'state', 'host'),
       {
-        bucket: config.bucket,
+        bucket: envConfig.bucket,
         prefix: this.remotePrefix('project', 'host'),
       },
     )
@@ -35,7 +40,7 @@ export class SqlStack extends InfraStack {
       this,
       this.id('remote', 'state', 'db'),
       {
-        bucket: config.bucket,
+        bucket: envConfig.bucket,
         prefix: this.remotePrefix('project', 'db'),
       },
     )
@@ -44,7 +49,7 @@ export class SqlStack extends InfraStack {
       this,
       this.id('remote', 'state', 'network'),
       {
-        bucket: config.bucket,
+        bucket: envConfig.bucket,
         prefix: this.remotePrefix('infra', 'network'),
       },
     )

@@ -7,11 +7,17 @@ import { ComputeSubnetwork } from '@cdktf/provider-google/lib/compute-subnetwork
 import { VpcAccessConnector } from '@cdktf/provider-google/lib/vpc-access-connector/index.js'
 import { DataTerraformRemoteStateGcs, TerraformOutput } from 'cdktf'
 import type { Construct } from 'constructs'
-import { InfraStack, type InfraStackConfig } from '../infra-stack.mjs'
+import { InfraStack } from '../infra-stack.mjs'
+import { envVars } from '../../utils/env.mjs'
 
-export type NetworkStackConfig = InfraStackConfig & {}
+export type NetworkStackConfig = {}
 
-export class NetworkStack extends InfraStack {
+const envConfig = {
+  bucket: envVars.GCP_TOOLS_TERRAFORM_REMOTE_STATE_BUCKET_ID,
+  region: envVars.GCP_TOOLS_REGION,
+}
+
+export class NetworkStack extends InfraStack<NetworkStackConfig> {
   protected appRemoteState: DataTerraformRemoteStateGcs
   protected connector: VpcAccessConnector
   protected dbRemoteState: DataTerraformRemoteStateGcs
@@ -27,7 +33,7 @@ export class NetworkStack extends InfraStack {
       this,
       this.id('remote', 'state', 'host'),
       {
-        bucket: config.bucket,
+        bucket: envConfig.bucket,
         prefix: this.remotePrefix('project', 'host'),
       },
     )
@@ -36,7 +42,7 @@ export class NetworkStack extends InfraStack {
       this,
       this.id('remote', 'state', 'db'),
       {
-        bucket: config.bucket,
+        bucket: envConfig.bucket,
         prefix: this.remotePrefix('project', 'db'),
       },
     )
@@ -45,7 +51,7 @@ export class NetworkStack extends InfraStack {
       this,
       this.id('remote', 'state', 'app'),
       {
-        bucket: config.bucket,
+        bucket: envConfig.bucket,
         prefix: this.remotePrefix('project', 'app'),
       },
     )

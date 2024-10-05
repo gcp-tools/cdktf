@@ -3,13 +3,22 @@ import { RandomProvider } from '@cdktf/provider-random/lib/provider/index.js'
 import { GcsBackend, TerraformStack } from 'cdktf'
 import type { Construct } from 'constructs'
 
+import { envVars } from '../utils/env.mjs'
+
 export type StackType = 'project' | 'infra' | 'app'
 export type BaseStackConfig = {
-  bucket: string
-  environment: string
-  region: string
   user: string
 }
+
+const envConfig = {
+  bucket: envVars.GCP_TOOLS_TERRAFORM_REMOTE_STATE_BUCKET_ID,
+  environment: envVars.GCP_TOOLS_ENVIRONMENT,
+  region: envVars.GCP_TOOLS_REGION,
+  billingAccount: envVars.GCP_TOOLS_BILLING_ACCOUNT,
+  orgId: envVars.GCP_TOOLS_ORG_ID,
+  owners: envVars.GCP_TOOLS_OWNER_EMAILS,
+}
+
 
 export class BaseStack<T extends BaseStackConfig> extends TerraformStack {
   public stackConfig: T
@@ -26,19 +35,20 @@ export class BaseStack<T extends BaseStackConfig> extends TerraformStack {
     this.stackConfig = config
 
     new GoogleProvider(this, 'google-provider', {
-      region: config.region,
+      region: envConfig.region,
     })
 
     new RandomProvider(this, 'random-provider')
 
     new GcsBackend(this, {
-      bucket: config.bucket,
+      bucket: envConfig.bucket,
       prefix: this.identifier('/'),
     })
   }
 
   identifier(delimiter = '-') {
-    const { environment, user } = this.stackConfig
+    const { user } = this.stackConfig
+    const { environment } = envConfig
     if (this.stackType === 'app' && user !== 'ci') {
       return `${user}${delimiter}${this.stackType}${delimiter}${this.stackId}`
     }
@@ -50,7 +60,7 @@ export class BaseStack<T extends BaseStackConfig> extends TerraformStack {
   }
 
   remotePrefix(stackType: string, remoteId: string) {
-    const { environment } = this.stackConfig
+    const { environment } = envConfig
     return [environment, stackType, remoteId].join('/')
   }
 

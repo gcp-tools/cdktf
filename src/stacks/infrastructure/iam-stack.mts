@@ -3,11 +3,17 @@ import { ProjectIamMember } from '@cdktf/provider-google/lib/project-iam-member/
 import { StorageBucketIamBinding } from '@cdktf/provider-google/lib/storage-bucket-iam-binding/index.js'
 import { DataTerraformRemoteStateGcs } from 'cdktf'
 import type { Construct } from 'constructs'
-import { InfraStack, type InfraStackConfig } from '../infra-stack.mjs'
+import { InfraStack } from '../infra-stack.mjs'
+import { envVars } from '../../utils/env.mjs'
+export type IamStackConfig = {}
 
-export type IamStackConfig = InfraStackConfig & {}
+const envConfig = {
+  bucket: envVars.GCP_TOOLS_TERRAFORM_REMOTE_STATE_BUCKET_ID,
+  region: envVars.GCP_TOOLS_REGION,
+}
 
-export class IamStack extends InfraStack {
+
+export class IamStack extends InfraStack<IamStackConfig> {
   protected appRemoteState: DataTerraformRemoteStateGcs
   protected networkRemoteState: DataTerraformRemoteStateGcs
   public cloudFunctionServiceAgent: string
@@ -26,7 +32,7 @@ export class IamStack extends InfraStack {
       this,
       this.id('remote', 'state', 'app'),
       {
-        bucket: config.bucket,
+        bucket: envConfig.bucket,
         prefix: this.remotePrefix('project', 'app'),
       },
     )
@@ -35,7 +41,7 @@ export class IamStack extends InfraStack {
       this,
       this.id('remote', 'state', 'network'),
       {
-        bucket: config.bucket,
+        bucket: envConfig.bucket,
         prefix: this.remotePrefix('infra', 'network'),
       },
     )
@@ -101,7 +107,7 @@ export class IamStack extends InfraStack {
     })
 
     new StorageBucketIamBinding(this, this.id('iam', 'compute', 'object', 'viewer'), {
-      bucket: `gcf-v2-sources-${this.projectNumber}-${this.stackConfig.region}`,
+      bucket: `gcf-v2-sources-${this.projectNumber}-${envConfig.region}`,
       members: [
         this.computeEngineServiceAgent
       ],

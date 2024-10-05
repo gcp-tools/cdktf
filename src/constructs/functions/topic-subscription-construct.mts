@@ -12,7 +12,7 @@ export type TopicSubscriptionFunctionConstructConfig = HttpConstructConfig & {
 export class TopicSubscriptionFunctionConstruct extends HttpConstruct<TopicSubscriptionFunctionConstructConfig> {
   protected subscription: PubsubSubscription
   constructor(
-    scope: AppStack,
+    scope: AppStack<TopicSubscriptionFunctionConstructConfig>,
     id: string,
     config: TopicSubscriptionFunctionConstructConfig,
   ) {

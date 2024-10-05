@@ -5,12 +5,16 @@ import { StringResource } from '@cdktf/provider-random/lib/string-resource/index
 import { TerraformOutput } from 'cdktf'
 import type { Construct } from 'constructs'
 import { BaseStack, type BaseStackConfig } from './base-stack.mjs'
+import { envVars } from '../utils/env.mjs'
 
-export type ProjectStackConfig = Omit<BaseStackConfig, 'user'> & {
+export type ProjectStackConfig = {
   apis: string[]
-  billingAccount: string
-  orgId: string
-  owners: string[]
+}
+
+const envConfig = {
+  billingAccount: envVars.GCP_TOOLS_BILLING_ACCOUNT,
+  orgId: envVars.GCP_TOOLS_ORG_ID,
+  owners: envVars.GCP_TOOLS_OWNER_EMAILS,
 }
 
 export class ProjectStack extends BaseStack<BaseStackConfig> {
@@ -18,9 +22,9 @@ export class ProjectStack extends BaseStack<BaseStackConfig> {
   protected projectId: string
   protected projectName: string
 
-  constructor(scope: Construct, id: string, config: ProjectStackConfig) {
+  constructor(scope: Construct, id: string, projectConfig: ProjectStackConfig) {
     super(scope, id, 'project', {
-      ...config,
+      ...projectConfig,
       user: 'ci'
     })
 
@@ -37,21 +41,21 @@ export class ProjectStack extends BaseStack<BaseStackConfig> {
 
     this.project = new Project(this, this.projectName, {
       autoCreateNetwork: false,
-      billingAccount: config.billingAccount,
+      billingAccount: envConfig.billingAccount,
       name: this.projectName,
-      orgId: config.orgId,
+      orgId: envConfig.orgId,
       projectId: this.projectId,
       skipDelete: true,
     })
 
     new ProjectIamBinding(this, this.id('iam', 'binding', 'owners'), {
       dependsOn: [this.project],
-      members: config.owners.map((owner) => `user:${owner}`),
+      members: envConfig.owners.map((owner) => `user:${owner}`),
       project: this.projectId,
       role: 'roles/owner',
     })
 
-    for (const api of config.apis) {
+    for (const api of projectConfig.apis) {
       new ProjectService(this, this.id('service', api), {
         dependsOn: [this.project],
         disableDependentServices: true,

@@ -2,9 +2,8 @@ import type { Construct } from 'constructs'
 import { ProjectStack, type ProjectStackConfig } from '../project-stack.mjs'
 
 export class AppProjectStack extends ProjectStack {
-  constructor(scope: Construct, config: ProjectStackConfig) {
+  constructor(scope: Construct, config: ProjectStackConfig = {apis: []}) {
     super(scope, 'app', {
-      ...config,
       apis: [
         'artifactregistry',
         'cloudbilling',

@@ -6,9 +6,9 @@ export type BaseConstructConfig = Record<string, unknown>
 export class BaseConstruct<T extends BaseConstructConfig> extends Construct {
   protected constructConfig: T
   protected constructId: string
-  protected constructScope: AppStack
+  protected constructScope: AppStack<T>
 
-  constructor(scope: AppStack, id: string, config: T) {
+  constructor(scope: AppStack<T>, id: string, config: T) {
     super(scope, id)
 
     this.constructScope = scope

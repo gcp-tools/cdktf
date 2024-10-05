@@ -8,12 +8,16 @@ import { Password } from '@cdktf/provider-random/lib/password/index.js'
 import { DataTerraformRemoteStateGcs } from 'cdktf'
 import type { Construct } from 'constructs'
 import { BaseStack, type BaseStackConfig } from './base-stack.mjs'
+import { envVars } from '../utils/env.mjs'
 
-export type AppStackConfig = BaseStackConfig & {}
+const envConfig = {
+  bucket: envVars.GCP_TOOLS_TERRAFORM_REMOTE_STATE_BUCKET_ID,
+  environment: envVars.GCP_TOOLS_ENVIRONMENT,
+  region: envVars.GCP_TOOLS_REGION,
+  user: envVars.GCP_TOOLS_USER,
+}
 
-export class AppStack<
-  T extends AppStackConfig = AppStackConfig,
-> extends BaseStack<AppStackConfig> {
+export class AppStack<T> extends BaseStack<BaseStackConfig> {
   protected dbInstanceId: string
   protected dbProjectId: string
   protected appRemoteState: DataTerraformRemoteStateGcs
@@ -29,8 +33,11 @@ export class AppStack<
   public vpcConnectorId: string
   public vpcProjectId: string
 
-  constructor(scope: Construct, id: string, config: T) {
-    super(scope, id, 'app', config)
+  constructor(scope: Construct, id: string, appConfig: T) {
+    super(scope, id, 'app', {
+      ...appConfig,
+      user: envConfig.user
+    })
 
     new ArchiveProvider(this, 'archive-provider')
 
@@ -38,7 +45,7 @@ export class AppStack<
       this,
       this.id('remote', 'state', 'app'),
       {
-        bucket: config.bucket,
+        bucket: envConfig.bucket,
         prefix: this.remotePrefix('project', 'app'),
       },
     )
@@ -47,7 +54,7 @@ export class AppStack<
       this,
       this.id('remote', 'state', 'network'),
       {
-        bucket: config.bucket,
+        bucket: envConfig.bucket,
         prefix: this.remotePrefix('infra', 'network'),
       },
     )
@@ -56,7 +63,7 @@ export class AppStack<
       this,
       this.id('remote', 'state', 'sql'),
       {
-        bucket: config.bucket,
+        bucket: envConfig.bucket,
         prefix: this.remotePrefix('infra', 'sql'),
       },
     )

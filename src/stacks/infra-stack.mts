@@ -1,12 +1,11 @@
 import type { Construct } from 'constructs'
 import { BaseStack, type BaseStackConfig } from './base-stack.mjs'
 
-export type InfraStackConfig = Omit<BaseStackConfig, 'user'> & {}
 
-export class InfraStack extends BaseStack<BaseStackConfig> {
-  constructor(scope: Construct, id: string, config: InfraStackConfig) {
+export class InfraStack<T> extends BaseStack<BaseStackConfig> {
+  constructor(scope: Construct, id: string, infraConfig: T) {
     super(scope, id, 'infra', {
-      ...config,
+      ...infraConfig,
       user: 'ci'
     })
   }

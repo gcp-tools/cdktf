@@ -13,7 +13,7 @@ import { StorageBucket } from '@cdktf/provider-google/lib/storage-bucket/index.j
 import type { ITerraformDependable } from 'cdktf'
 import type { AppStack } from '../../stacks/app-stack.mjs'
 import { BaseConstruct, type BaseConstructConfig } from '../base-construct.mjs'
-
+import { envVars } from '../../utils/env.mjs'
 const sourceDirectory = resolve(cwd(), '..', 'services')
 
 export type HttpConstructConfig = BaseConstructConfig & {
@@ -21,6 +21,10 @@ export type HttpConstructConfig = BaseConstructConfig & {
   dependsOn?: ITerraformDependable[]
   grantInvokerPermissions?: string[]
   serviceConfig: Partial<Cloudfunctions2FunctionServiceConfig>
+}
+
+const envConfig = {
+  region: envVars.GCP_TOOLS_REGION,
 }
 
 export class HttpConstruct<
@@ -33,7 +37,7 @@ export class HttpConstruct<
   protected invoker: CloudRunServiceIamBinding
   public fn: Cloudfunctions2Function
 
-  constructor(scope: AppStack, id: string, config: T) {
+  constructor(scope: AppStack<T>, id: string, config: T) {
     super(scope, id, config)
 
     const sourceDir = resolve(sourceDirectory, id, 'dist')
@@ -42,7 +46,7 @@ export class HttpConstruct<
     this.bucket = new StorageBucket(this, bucketId, {
       dependsOn: [scope.stackServiceAccount, ...(config.dependsOn || [])],
       forceDestroy: true,
-      location: scope.stackConfig.region,
+      location: envConfig.region,
       name: bucketId,
       project: scope.projectId,
       uniformBucketLevelAccess: true,
@@ -99,7 +103,7 @@ export class HttpConstruct<
         },
       },
       dependsOn: [this.archive],
-      location: scope.stackConfig.region,
+      location: envConfig.region,
       name: fnId,
       project: scope.projectId,
       serviceConfig: {
@@ -131,7 +135,7 @@ export class HttpConstruct<
       this.id('binding', 'invoker'),
       {
         dependsOn: [this.fn],
-        location: scope.stackConfig.region,
+        location: envConfig.region,
         members: [
           `serviceAccount:${scope.stackServiceAccount.email}`,
           `serviceAccount:service-${scope.projectNumber}@serverless-robot-prod.iam.gserviceaccount.com`,

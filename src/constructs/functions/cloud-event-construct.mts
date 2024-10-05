@@ -16,7 +16,7 @@ import { StorageBucket } from '@cdktf/provider-google/lib/storage-bucket/index.j
 import type { ITerraformDependable } from 'cdktf'
 import type { AppStack } from '../../stacks/app-stack.mjs'
 import { BaseConstruct, type BaseConstructConfig } from '../base-construct.mjs'
-
+import { envVars } from '../../utils/env.mjs'
 const sourceDirectory = resolve(
   relative(cwd(), dirname(fileURLToPath(import.meta.url))),
   '..',
@@ -32,6 +32,10 @@ export type CloudEventConstructConfig = BaseConstructConfig & {
   vpcConnector: DataGoogleVpcAccessConnector //  get from AppStack
 }
 
+const envConfig = {
+  region: envVars.GCP_TOOLS_REGION,
+}
+
 export class CloudFunctionConstruct<
   T extends CloudEventConstructConfig,
 > extends BaseConstruct<CloudEventConstructConfig> {
@@ -42,7 +46,7 @@ export class CloudFunctionConstruct<
   protected invoker: CloudRunServiceIamBinding
   public fn: Cloudfunctions2Function
 
-  constructor(scope: AppStack, id: string, config: T) {
+  constructor(scope: AppStack<T>, id: string, config: T) {
     super(scope, id, config)
 
     const sourceDir = resolve(sourceDirectory, id)
@@ -50,7 +54,7 @@ export class CloudFunctionConstruct<
     this.bucket = new StorageBucket(this, this.id('source', 'code'), {
       dependsOn: [scope.stackServiceAccount, ...(config.dependsOn || [])],
       forceDestroy: true,
-      location: scope.stackConfig.region,
+      location: envConfig.region,
       name: this.constructId,
       project: scope.projectId,
       versioning: {
@@ -83,7 +87,7 @@ export class CloudFunctionConstruct<
     const fnId = this.id('fn')
     this.fn = new Cloudfunctions2Function(this, fnId, {
       buildConfig: {
-        dockerRepository: `projects/${this.constructScope.projectName}/locations/${scope.stackConfig.region}/repositories/gcf-artifacts`,
+        dockerRepository: `projects/${this.constructScope.projectName}/locations/${envConfig.region}/repositories/gcf-artifacts`,
         runtime: 'nodejs20',
         entryPoint: 'main',
         ...config.buildConfig,
@@ -99,7 +103,7 @@ export class CloudFunctionConstruct<
         eventType: 'google.cloud.pubsub.topic.v1.messagePublished',
         ...config.eventTrigger,
       },
-      location: scope.stackConfig.region,
+      location: envConfig.region,
       name: fnId,
       project: this.constructScope.projectId,
       serviceConfig: {
@@ -130,7 +134,7 @@ export class CloudFunctionConstruct<
       this.id('binding', 'invoker'),
       {
         dependsOn: [this.fn],
-        location: scope.stackConfig.region,
+        location: envConfig.region,
         members: [
           `serviceAccount:${scope.stackServiceAccount.email}`,
           `serviceAccount:service-${scope.projectNumber}@serverless-robot-prod.iam.gserviceaccount.com`, // ?
