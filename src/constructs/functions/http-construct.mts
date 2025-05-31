@@ -12,8 +12,8 @@ import { StorageBucketObject } from '@cdktf/provider-google/lib/storage-bucket-o
 import { StorageBucket } from '@cdktf/provider-google/lib/storage-bucket/index.js'
 import type { ITerraformDependable } from 'cdktf'
 import type { AppStack } from '../../stacks/app-stack.mjs'
-import { BaseConstruct } from '../base-construct.mjs'
 import { envConfig } from '../../utils/env.mjs'
+import { BaseConstruct } from '../base-construct.mjs'
 const sourceDirectory = resolve(cwd(), '..', 'services')
 
 export type HttpConstructConfig = {
@@ -22,7 +22,6 @@ export type HttpConstructConfig = {
   grantInvokerPermissions?: string[]
   serviceConfig: Partial<Cloudfunctions2FunctionServiceConfig>
 }
-
 
 export class HttpConstruct<
   T extends HttpConstructConfig,
@@ -37,7 +36,7 @@ export class HttpConstruct<
   constructor(scope: AppStack, id: string, config: T) {
     super(scope, id, config)
 
-    const sourceDir = resolve(sourceDirectory, id, 'dist')
+    const sourceDir = resolve(sourceDirectory, scope.stackId, id, 'dist')
 
     const bucketId = this.id('source', 'code')
     this.bucket = new StorageBucket(this, bucketId, {
@@ -54,12 +53,8 @@ export class HttpConstruct<
 
     new StorageBucketIamBinding(this, this.id('iam', 'object', 'viewer'), {
       bucket: this.bucket.name,
-      dependsOn: [
-        this.bucket,
-      ],
-      members: [
-        `serviceAccount:${scope.stackServiceAccount.email}`,
-      ],
+      dependsOn: [this.bucket],
+      members: [`serviceAccount:${scope.stackServiceAccount.email}`],
       role: 'roles/storage.admin',
     })
 
@@ -89,7 +84,7 @@ export class HttpConstruct<
     this.fn = new Cloudfunctions2Function(this, fnId, {
       buildConfig: {
         // dockerRepository: `projects/${scope.projectId}/locations/${scope.stackConfig.region}/repositories/gcf-artifacts`,
-        runtime: 'nodejs20',
+        runtime: 'nodejs22',
         entryPoint: 'main',
         ...config.buildConfig,
         source: {
@@ -116,7 +111,7 @@ export class HttpConstruct<
         ...(config.serviceConfig.availableCpu
           ? { availableCpu: config.serviceConfig.availableCpu }
           : {}),
-            serviceAccountEmail: scope.stackServiceAccount.email,
+        serviceAccountEmail: scope.stackServiceAccount.email,
         vpcConnector: scope.vpcConnectorId,
         vpcConnectorEgressSettings: 'PRIVATE_RANGES_ONLY',
       },

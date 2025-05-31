@@ -6,28 +6,28 @@ import { SqlDatabaseInstance } from '@cdktf/provider-google/lib/sql-database-ins
 import { SqlDatabase } from '@cdktf/provider-google/lib/sql-database/index.js'
 import { StringResource } from '@cdktf/provider-random/lib/string-resource/index.js'
 import { DataTerraformRemoteStateGcs, TerraformOutput } from 'cdktf'
-import { App } from 'cdktf'
-import { InfraStack } from '../infra-stack.mjs'
+import type { App } from 'cdktf'
 import { envVars } from '../../utils/env.mjs'
-export type SqlStackConfig = {}
+import { BaseInfraStack } from './base-infra-stack.mjs'
+export type SqlInfraStackConfig = {}
 
 const envConfig = {
   bucket: envVars.GCP_TOOLS_TERRAFORM_REMOTE_STATE_BUCKET_ID,
   region: envVars.GCP_TOOLS_REGION,
 }
 
-export class SqlStack extends InfraStack<SqlStackConfig> {
+export class SqlInfraStack extends BaseInfraStack<SqlInfraStackConfig> {
   protected db: SqlDatabaseInstance
   protected dbConnection: ServiceNetworkingConnection
-  protected dbRemoteState: DataTerraformRemoteStateGcs
+  protected dataProjectRemoteState: DataTerraformRemoteStateGcs
   protected dbServiceAccount: ServiceAccount
-  protected hostRemoteState: DataTerraformRemoteStateGcs
-  protected networkRemoteState: DataTerraformRemoteStateGcs
+  protected hostProjectRemoteState: DataTerraformRemoteStateGcs
+  protected networkInfraRemoteState: DataTerraformRemoteStateGcs
 
-  constructor(scope: App, config: SqlStackConfig) {
+  constructor(scope: App, config: SqlInfraStackConfig) {
     super(scope, 'sql', config)
 
-    this.hostRemoteState = new DataTerraformRemoteStateGcs(
+    this.hostProjectRemoteState = new DataTerraformRemoteStateGcs(
       this,
       this.id('remote', 'state', 'host'),
       {
@@ -36,16 +36,16 @@ export class SqlStack extends InfraStack<SqlStackConfig> {
       },
     )
 
-    this.dbRemoteState = new DataTerraformRemoteStateGcs(
+    this.dataProjectRemoteState = new DataTerraformRemoteStateGcs(
       this,
-      this.id('remote', 'state', 'db'),
+      this.id('remote', 'state', 'data'),
       {
         bucket: envConfig.bucket,
-        prefix: this.remotePrefix('project', 'db'),
+        prefix: this.remotePrefix('project', 'data'),
       },
     )
 
-    this.networkRemoteState = new DataTerraformRemoteStateGcs(
+    this.networkInfraRemoteState = new DataTerraformRemoteStateGcs(
       this,
       this.id('remote', 'state', 'network'),
       {
@@ -54,9 +54,9 @@ export class SqlStack extends InfraStack<SqlStackConfig> {
       },
     )
 
-    const dbProjectId = this.dbRemoteState.getString('project-id')
-    const hostProjectId = this.hostRemoteState.getString('project-id')
-    const vpcId = this.networkRemoteState.getString('vpc-id')
+    const dataProjectId = this.dataProjectRemoteState.getString('project-id')
+    const hostProjectId = this.hostProjectRemoteState.getString('project-id')
+    const vpcId = this.networkInfraRemoteState.getString('vpc-id')
     const privateIpAllodId = this.id('private', 'ip', 'alloc')
 
     new ComputeGlobalAddress(this, privateIpAllodId, {
@@ -93,7 +93,7 @@ export class SqlStack extends InfraStack<SqlStackConfig> {
           special: false,
         }).id
       }`,
-      project: dbProjectId,
+      project: dataProjectId,
       settings: {
         databaseFlags: [
           {
@@ -119,26 +119,25 @@ export class SqlStack extends InfraStack<SqlStackConfig> {
     new SqlDatabase(this, this.id('db', 'database'), {
       instance: this.db.name,
       name: 'pragma',
-      project: dbProjectId,
+      project: dataProjectId,
     })
 
     const serviceAccount = this.id()
     this.dbServiceAccount = new ServiceAccount(this, serviceAccount, {
       accountId: serviceAccount,
-      description: `A generated service account for project '${dbProjectId}'`,
-      project: dbProjectId,
+      description: `A generated service account for project '${dataProjectId}'`,
+      project: dataProjectId,
     })
 
     new ProjectIamMember(this, this.id('iam', 'sql', 'client'), {
       dependsOn: [this.dbServiceAccount],
       member: `serviceAccount:${this.dbServiceAccount.email}`,
-      project: dbProjectId,
+      project: dataProjectId,
       role: 'roles/cloudsql.client',
     })
 
-
     new TerraformOutput(this, 'db-project-id', {
-      value: dbProjectId,
+      value: dataProjectId,
     })
 
     new TerraformOutput(this, 'db-instance-id', {

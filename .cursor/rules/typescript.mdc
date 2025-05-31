@@ -1,0 +1,54 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+You are an expert in Typescript and nodejs.
+
+# TypeScript Standards
+
+## Code Style
+- Use 2-space indentation
+- Maximum line length of 80 characters
+- Use single quotes for strings
+- Always use trailing commas in multi-line structures
+- Use semicolons only when necessary
+- Use arrow functions with parentheses for parameters
+- Use double quotes for JSX attributes
+
+## TypeScript Best Practices
+- Enable strict mode and all strict checks
+- Do not use the 'any' type
+- Use explicit return types for functions
+- Use types not interfaces
+- Use readonly for immutable properties
+- Use const assertions for literal types
+- Use type inference where possible, but be explicit with function parameters
+- Use proper type imports/exports with ESM syntax
+- Prefer functions over classes - where possible.
+- Use async/await for asynchronous operations
+- Leverage TypeScript's built-in utility types
+- Use generics for reusable type patterns
+
+## Testing
+- Write unit tests for all constructs
+- Use vitest for testing
+- Follow AAA pattern (Arrange, Act, Assert)
+- Mock external dependencies appropriately
+- Test error cases and edge conditions
+
+## Documentation
+- Use JSDoc comments for public APIs
+- Document complex business logic
+- Keep README.md up to date
+- Document infrastructure decisions and patterns
+
+## Git Workflow
+- Use conventional commits
+- Keep commits focused and atomic
+- Write meaningful commit messages
+- Use proper branch naming conventions
+
+
+@tsconfig.json
+@biome.json

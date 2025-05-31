@@ -1,0 +1,32 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+Take into consideration:
+ - We are splitting the structure into 3 GCP projects: host, db and app
+ - host is for shared networking stacks
+ - db is for database stacks - excluding Firestore
+ - app is for application level code - cloudrun, web server load balancer stacks.
+
+
+Project structure should follow:
+
+src/
+├── constructs/         # Reusable infrastructure components
+├── stacks/             # Infrastructure stacks
+│   ├── infrastructure/ # Core infrastructure stacks
+│   └── projects/       # Project management stacks
+└── utils/              # Shared utilities
+
+- Keep related files together
+- Use proper file naming conventions
+- Follow module organization patterns
+- Maintain clear separation of concerns
+- Use proper directory structure
+- Follow consistent file organization
+
+When creating stacks and/or constructs, consider which project they should belong to.
+
+@src/stacks/
+@src/constructs/

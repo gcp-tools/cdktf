@@ -3,15 +3,15 @@ import { ProjectService } from '@cdktf/provider-google/lib/project-service/index
 import { Project } from '@cdktf/provider-google/lib/project/index.js'
 import { StringResource } from '@cdktf/provider-random/lib/string-resource/index.js'
 import { TerraformOutput } from 'cdktf'
-import { App } from 'cdktf'
-import { BaseStack, type BaseStackConfig } from './base-stack.mjs'
-import { envConfig } from '../utils/env.mjs'
+import type { App } from 'cdktf'
+import { envConfig } from '../../utils/env.mjs'
+import { BaseStack, type BaseStackConfig } from '../base-stack.mjs'
 
 export type ProjectStackConfig = {
   apis: string[]
 }
 
-export class ProjectStack extends BaseStack<BaseStackConfig> {
+export class BaseProjectStack extends BaseStack<BaseStackConfig> {
   protected project: Project
   protected projectId: string
   protected projectName: string
@@ -19,7 +19,7 @@ export class ProjectStack extends BaseStack<BaseStackConfig> {
   constructor(scope: App, id: string, projectConfig: ProjectStackConfig) {
     super(scope, id, 'project', {
       ...projectConfig,
-      user: 'ci'
+      user: 'ci',
     })
 
     this.projectName = this.identifier()

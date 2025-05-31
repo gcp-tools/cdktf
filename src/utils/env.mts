@@ -37,15 +37,14 @@ export let envConfig: EnvConfig
 try {
   envVars = Value.Decode(envSchema, rawEnv)
   envConfig = {
+    billingAccount: envVars.GCP_TOOLS_BILLING_ACCOUNT,
     bucket: envVars.GCP_TOOLS_TERRAFORM_REMOTE_STATE_BUCKET_ID,
     environment: envVars.GCP_TOOLS_ENVIRONMENT,
-    region: envVars.GCP_TOOLS_REGION,
-    billingAccount: envVars.GCP_TOOLS_BILLING_ACCOUNT,
     orgId: envVars.GCP_TOOLS_ORG_ID,
     owners: envVars.GCP_TOOLS_OWNER_EMAILS,
+    region: envVars.GCP_TOOLS_REGION,
     user: envVars.GCP_TOOLS_USER,
   }
-
 } catch (err) {
   console.log(JSON.stringify([...Value.Errors(envSchema, rawEnv)], null, 2))
 }

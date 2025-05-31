@@ -1,21 +1,21 @@
 import { ArchiveProvider } from '@cdktf/provider-archive/lib/provider/index.js'
-import { SqlUser } from '@cdktf/provider-google/lib/sql-user/index.js'
 import { ProjectIamMember } from '@cdktf/provider-google/lib/project-iam-member/index.js'
 import { SecretManagerSecret } from '@cdktf/provider-google/lib/secret-manager-secret/index.js'
 // import { ServiceAccountIamMember } from '@cdktf/provider-google/lib/service-account-iam-member/index.js'
 import { ServiceAccount } from '@cdktf/provider-google/lib/service-account/index.js'
+import { SqlUser } from '@cdktf/provider-google/lib/sql-user/index.js'
 import { Password } from '@cdktf/provider-random/lib/password/index.js'
 import { DataTerraformRemoteStateGcs } from 'cdktf'
-import { App } from 'cdktf'
-import { BaseStack, type BaseStackConfig } from './base-stack.mjs'
+import type { App } from 'cdktf'
 import { envConfig } from '../utils/env.mjs'
+import { BaseStack, type BaseStackConfig } from './base-stack.mjs'
 
 export class AppStack extends BaseStack<BaseStackConfig> {
   protected dbInstanceId: string
   protected dbProjectId: string
-  protected appRemoteState: DataTerraformRemoteStateGcs
-  protected networkRemoteState: DataTerraformRemoteStateGcs
-  protected sqlRemoteState: DataTerraformRemoteStateGcs
+  protected appProjectRemoteState: DataTerraformRemoteStateGcs
+  protected networkInfraRemoteState: DataTerraformRemoteStateGcs
+  protected sqlInfraRemoteState: DataTerraformRemoteStateGcs
 
   public projectId: string
   public projectName: string
@@ -28,12 +28,12 @@ export class AppStack extends BaseStack<BaseStackConfig> {
 
   constructor(scope: App, id: string) {
     super(scope, id, 'app', {
-      user: envConfig.user
+      user: envConfig.user,
     })
 
     new ArchiveProvider(this, 'archive-provider')
 
-    this.appRemoteState = new DataTerraformRemoteStateGcs(
+    this.appProjectRemoteState = new DataTerraformRemoteStateGcs(
       this,
       this.id('remote', 'state', 'app'),
       {
@@ -42,7 +42,7 @@ export class AppStack extends BaseStack<BaseStackConfig> {
       },
     )
 
-    this.networkRemoteState = new DataTerraformRemoteStateGcs(
+    this.networkInfraRemoteState = new DataTerraformRemoteStateGcs(
       this,
       this.id('remote', 'state', 'network'),
       {
@@ -51,7 +51,7 @@ export class AppStack extends BaseStack<BaseStackConfig> {
       },
     )
 
-    this.sqlRemoteState = new DataTerraformRemoteStateGcs(
+    this.sqlInfraRemoteState = new DataTerraformRemoteStateGcs(
       this,
       this.id('remote', 'state', 'sql'),
       {
@@ -60,13 +60,14 @@ export class AppStack extends BaseStack<BaseStackConfig> {
       },
     )
 
-    this.dbInstanceId = this.sqlRemoteState.getString('db-instance-id')
-    this.dbProjectId = this.sqlRemoteState.getString('db-project-id')
-    this.projectId = this.appRemoteState.getString('project-id')
-    this.projectName = this.appRemoteState.getString('project-name')
-    this.projectNumber = this.appRemoteState.getString('project-number')
-    this.vpcConnectorId = this.networkRemoteState.getString('vpc-connector-id')
-    this.vpcProjectId = this.networkRemoteState.getString('vpc-project-id')
+    this.dbInstanceId = this.sqlInfraRemoteState.getString('db-instance-id')
+    this.dbProjectId = this.sqlInfraRemoteState.getString('db-project-id')
+    this.projectId = this.appProjectRemoteState.getString('project-id')
+    this.projectName = this.appProjectRemoteState.getString('project-name')
+    this.projectNumber = this.appProjectRemoteState.getString('project-number')
+    this.vpcConnectorId =
+      this.networkInfraRemoteState.getString('vpc-connector-id')
+    this.vpcProjectId = this.networkInfraRemoteState.getString('vpc-project-id')
 
     const serviceAccountId = this.id()
     this.stackServiceAccount = new ServiceAccount(this, serviceAccountId, {
@@ -78,7 +79,7 @@ export class AppStack extends BaseStack<BaseStackConfig> {
 
     new ProjectIamMember(
       this,
-      this.id('iam', 'secretmanager', 'secret' ,'accessor'),
+      this.id('iam', 'secretmanager', 'secret', 'accessor'),
       {
         dependsOn: [this.stackServiceAccount],
         member: serviceAccount,
@@ -108,11 +109,15 @@ export class AppStack extends BaseStack<BaseStackConfig> {
       role: 'roles/logging.logWriter',
     })
 
-    new ProjectIamMember(this, this.id('iam', 'binding', 'vpcaccess', 'admin'), {
-      member: serviceAccount,
-      project: this.projectId,
-      role: 'roles/vpcaccess.admin',
-    });
+    new ProjectIamMember(
+      this,
+      this.id('iam', 'binding', 'vpcaccess', 'admin'),
+      {
+        member: serviceAccount,
+        project: this.projectId,
+        role: 'roles/vpcaccess.admin',
+      },
+    )
 
     // //  this might need to move to the project app so CI/CD can federate using it
     // new ServiceAccountIamMember(this, this.id('iam', 'workload', 'identity'), {
@@ -123,24 +128,27 @@ export class AppStack extends BaseStack<BaseStackConfig> {
     // })
 
     // this.stackServiceAccount.email.replace('.gserviceaccount.com', '') didn't work.
+    //  ¯\_(ツ)_/¯
     // It's the same as this: `${this.id()}@${this.projectId}.iam`
 
     new SqlUser(this, this.id('iam', 'service', 'account', 'user'), {
-      dependsOn: [
-        this.stackServiceAccount
-      ],
+      dependsOn: [this.stackServiceAccount],
       instance: this.dbInstanceId,
       name: `${this.id()}@${this.projectId}.iam`,
       project: this.dbProjectId,
-      type: "CLOUD_IAM_SERVICE_ACCOUNT"
+      type: 'CLOUD_IAM_SERVICE_ACCOUNT',
     })
 
-    new ProjectIamMember(this, this.id('iam', 'service', 'account', 'user', 'sql'), {
-      dependsOn: [this.stackServiceAccount],
-      member: serviceAccount,
-      project: this.projectId,
-      role: 'roles/cloudsql.client',
-    })
+    new ProjectIamMember(
+      this,
+      this.id('iam', 'service', 'account', 'user', 'sql'),
+      {
+        dependsOn: [this.stackServiceAccount],
+        member: serviceAccount,
+        project: this.projectId,
+        role: 'roles/cloudsql.client',
+      },
+    )
 
     const sqlId = this.id('sql', 'user')
     this.sqlUser = new SqlUser(this, sqlId, {
@@ -150,15 +158,14 @@ export class AppStack extends BaseStack<BaseStackConfig> {
       password: new Password(this, this.id('sql', 'user', 'password'), {
         length: 16,
         special: false,
-      }).result
+      }).result,
     })
 
     const secretId = this.id('secret', 'sql', 'password')
     this.secret = new SecretManagerSecret(this, secretId, {
       project: this.projectId,
-      replication: {auto: {}},
+      replication: { auto: {} },
       secretId,
     })
-
   }
 }

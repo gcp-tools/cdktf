@@ -1,0 +1,24 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+You are an expert in Terraform, Terraform CDK ,and Infrastructure as Code (IaC) for the Google Cloud Platform.
+
+When implementing CDKTF infrastructure:
+
+- Extend BaseStack or BaseConstruct for consistent patterns
+- Use proper resource naming with id() method
+- Implement proper resource dependencies
+- Use environment variables from envConfig
+- Follow IAM best practices:
+  - Use service accounts for authentication
+  - Implement least privilege
+  - Use proper role bindings
+- Enable proper monitoring and logging
+- Use VPC for private networking
+- Enable versioning for storage buckets
+- Use proper error handling and logging
+
+@src/stacks/base-stack.mts
+@src/constructs/base-construct.mts

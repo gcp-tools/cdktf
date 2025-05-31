@@ -6,30 +6,30 @@ import { ComputeSharedVpcServiceProject } from '@cdktf/provider-google/lib/compu
 import { ComputeSubnetwork } from '@cdktf/provider-google/lib/compute-subnetwork/index.js'
 import { VpcAccessConnector } from '@cdktf/provider-google/lib/vpc-access-connector/index.js'
 import { DataTerraformRemoteStateGcs, TerraformOutput } from 'cdktf'
-import { App } from 'cdktf'
-import { InfraStack } from '../infra-stack.mjs'
+import type { App } from 'cdktf'
 import { envVars } from '../../utils/env.mjs'
+import { BaseInfraStack } from './base-infra-stack.mjs'
 
-export type NetworkStackConfig = {}
+export type NetworkInfraStackConfig = {}
 
 const envConfig = {
   bucket: envVars.GCP_TOOLS_TERRAFORM_REMOTE_STATE_BUCKET_ID,
   region: envVars.GCP_TOOLS_REGION,
 }
 
-export class NetworkStack extends InfraStack<NetworkStackConfig> {
-  protected appRemoteState: DataTerraformRemoteStateGcs
+export class NetworkInfraStack extends BaseInfraStack<NetworkInfraStackConfig> {
+  protected appProjectRemoteState: DataTerraformRemoteStateGcs
   protected connector: VpcAccessConnector
-  protected dbRemoteState: DataTerraformRemoteStateGcs
-  protected hostRemoteState: DataTerraformRemoteStateGcs
+  protected dataProjectRemoteState: DataTerraformRemoteStateGcs
+  protected hostProjectRemoteState: DataTerraformRemoteStateGcs
   protected hostVpcProject: ComputeSharedVpcHostProject
   protected privateSecondaryIp: ComputeSubnetwork
   protected vpc: ComputeNetwork
 
-  constructor(scope: App, config: NetworkStackConfig) {
+  constructor(scope: App, config: NetworkInfraStackConfig) {
     super(scope, 'network', config)
 
-    this.hostRemoteState = new DataTerraformRemoteStateGcs(
+    this.hostProjectRemoteState = new DataTerraformRemoteStateGcs(
       this,
       this.id('remote', 'state', 'host'),
       {
@@ -38,16 +38,16 @@ export class NetworkStack extends InfraStack<NetworkStackConfig> {
       },
     )
 
-    this.dbRemoteState = new DataTerraformRemoteStateGcs(
+    this.dataProjectRemoteState = new DataTerraformRemoteStateGcs(
       this,
-      this.id('remote', 'state', 'db'),
+      this.id('remote', 'state', 'data'),
       {
         bucket: envConfig.bucket,
-        prefix: this.remotePrefix('project', 'db'),
+        prefix: this.remotePrefix('project', 'data'),
       },
     )
 
-    this.appRemoteState = new DataTerraformRemoteStateGcs(
+    this.appProjectRemoteState = new DataTerraformRemoteStateGcs(
       this,
       this.id('remote', 'state', 'app'),
       {
@@ -56,7 +56,7 @@ export class NetworkStack extends InfraStack<NetworkStackConfig> {
       },
     )
 
-    const hostProjectId = this.hostRemoteState.getString('project-id')
+    const hostProjectId = this.hostProjectRemoteState.getString('project-id')
 
     this.hostVpcProject = new ComputeSharedVpcHostProject(
       this,
@@ -66,16 +66,20 @@ export class NetworkStack extends InfraStack<NetworkStackConfig> {
       },
     )
 
-    new ComputeSharedVpcServiceProject(this, this.id('vpc', 'service', 'db'), {
-      dependsOn: [this.hostVpcProject],
-      hostProject: hostProjectId,
-      serviceProject: this.dbRemoteState.getString('project-id'),
-    })
+    new ComputeSharedVpcServiceProject(
+      this,
+      this.id('vpc', 'service', 'data'),
+      {
+        dependsOn: [this.hostVpcProject],
+        hostProject: hostProjectId,
+        serviceProject: this.dataProjectRemoteState.getString('project-id'),
+      },
+    )
 
     new ComputeSharedVpcServiceProject(this, this.id('vpc', 'service', 'app'), {
       dependsOn: [this.hostVpcProject],
       hostProject: hostProjectId,
-      serviceProject: this.appRemoteState.getString('project-id'),
+      serviceProject: this.appProjectRemoteState.getString('project-id'),
     })
 
     this.vpc = new ComputeNetwork(this, this.id('vpc', 'network'), {
@@ -83,7 +87,7 @@ export class NetworkStack extends InfraStack<NetworkStackConfig> {
       mtu: 1460,
       name: this.id('vpc'),
       project: hostProjectId,
-      routingMode: 'REGIONAL',
+      routingMode: 'GLOBAL',
     })
 
     this.privateSecondaryIp = new ComputeSubnetwork(
@@ -139,6 +143,5 @@ export class NetworkStack extends InfraStack<NetworkStackConfig> {
     new TerraformOutput(this, 'vpc-connector-id', {
       value: this.connector.id,
     })
-
   }
 }

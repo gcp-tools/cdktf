@@ -1,3 +1,4 @@
+import { GoogleBetaProvider } from '@cdktf/provider-google-beta/lib/provider/index.js'
 import { GoogleProvider } from '@cdktf/provider-google/lib/provider/index.js'
 import { RandomProvider } from '@cdktf/provider-random/lib/provider/index.js'
 import { GcsBackend, TerraformStack } from 'cdktf'
@@ -10,8 +11,11 @@ export type BaseStackConfig = {
 }
 
 export class BaseStack<T extends BaseStackConfig> extends TerraformStack {
+  public googleProvider: GoogleProvider
+  public googleBetaProvider: GoogleBetaProvider
+
   public stackConfig: T
-  protected stackId: string
+  public stackId: string
   protected stackScope: Construct
   protected stackType: StackType
 
@@ -23,9 +27,17 @@ export class BaseStack<T extends BaseStackConfig> extends TerraformStack {
     this.stackId = id
     this.stackConfig = config
 
-    new GoogleProvider(this, 'google-provider', {
+    this.googleProvider = new GoogleProvider(this, 'google-provider', {
       region: envConfig.region,
     })
+
+    this.googleBetaProvider = new GoogleBetaProvider(
+      this,
+      'google-provider-beta',
+      {
+        region: envConfig.region,
+      },
+    )
 
     new RandomProvider(this, 'random-provider')
 

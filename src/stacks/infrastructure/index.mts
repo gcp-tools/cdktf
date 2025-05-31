@@ -1,3 +1,3 @@
-export * from './iam-stack.mjs'
-export * from './network-stack.mjs'
-export * from './sql-stack.mjs'
+export * from './iam-infra-stack.mjs'
+export * from './network-infra-stack.mjs'
+export * from './sql-infra-stack.mjs'

@@ -1,9 +1,12 @@
-import { App } from 'cdktf'
-import { ProjectStack, type ProjectStackConfig } from '../project-stack.mjs'
+import type { App } from 'cdktf'
+import {
+  BaseProjectStack,
+  type ProjectStackConfig,
+} from './base-project-stack.mjs'
 
-export class DbProjectStack extends ProjectStack {
-  constructor(scope: App, config: ProjectStackConfig = {apis: []}) {
-    super(scope, 'db', {
+export class DataProjectStack extends BaseProjectStack {
+  constructor(scope: App, config: ProjectStackConfig = { apis: [] }) {
+    super(scope, 'data', {
       apis: [
         'compute',
         'servicenetworking',
