@@ -26,11 +26,6 @@ jobs:
           node-version: '22.x'
           cache: 'npm'
 
-      - name: Create .npmrc
-        run: |
-          echo "@gcp-tools:registry=https://registry.npmjs.org/" > ./.npmrc
-          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> ./.npmrc
-
       - name: Install dependencies
         run: npm ci
 
@@ -38,4 +33,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm run release
+        run: |
+          echo "@gcp-tools:registry=https://registry.npmjs.org/" > ./.npmrc
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> ./.npmrc
+          npm run release
