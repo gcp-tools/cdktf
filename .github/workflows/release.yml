@@ -27,7 +27,9 @@ jobs:
           cache: 'npm'
 
       - name: Create .npmrc
-        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
+        run: |
+          echo "@gcp-tools:registry=https://registry.npmjs.org/" > ./.npmrc
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> ./.npmrc
 
       - name: Install dependencies
         run: npm ci
