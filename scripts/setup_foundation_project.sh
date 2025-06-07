@@ -24,26 +24,9 @@ if [ -z "${GCP_TOOLS_BILLING_ACCOUNT:-}" ]; then
   read -p "Enter your GCP Billing Account ID: " GCP_TOOLS_BILLING_ACCOUNT
 fi
 
-if [ -z "${GCP_TOOLS_REGIONS:-}" ]; then
-  read -p "Enter a comma-separated list of up to 3 GCP regions (e.g., us-central1,europe-west1): " GCP_TOOLS_REGIONS
+if [ -z "${GCP_DEFAULT_REGION:-}" ]; then
+  read -p "Enter the default GCP region (e.g., europe-west1): " GCP_DEFAULT_REGION
 fi
-
-# Validate and process regions
-GCP_TOOLS_REGIONS=$(echo "$GCP_TOOLS_REGIONS" | tr -d '[:space:]')
-IFS=',' read -ra REGION_ARRAY <<< "$GCP_TOOLS_REGIONS"
-NUM_REGIONS=${#REGION_ARRAY[@]}
-
-if [ "${NUM_REGIONS}" -eq 0 ] || [ -z "${REGION_ARRAY[0]}" ]; then
-  echo "Error: At least one GCP region must be provided."
-  exit 1
-fi
-
-if [ "${NUM_REGIONS}" -gt 3 ]; then
-  echo "Error: A maximum of 3 regions can be specified."
-  exit 1
-fi
-
-GCP_DEFAULT_REGION="${REGION_ARRAY[0]}"
 
 if [ -z "${GCP_TOOLS_GITHUB_IDENTITY_SPECIFIER:-}" ]; then
   read -p "Enter your GitHub identity specifier (e.g., 'your-org' or 'owner/repo'): " GCP_TOOLS_GITHUB_IDENTITY_SPECIFIER
@@ -183,8 +166,8 @@ create_github_provider() {
   gcloud iam workload-identity-pools create "${pool_id}" \
     --project="${PROJECT_ID}" \
     --location="global" \
-    --display-name="gcp-tools-cdktf ${pool_display_name_suffix} Pool" \
-    --description="Pool for gcp-tools-cdktf ${pool_display_name_suffix} environment"
+    --display-name="${GCP_TOOLS_PROJECT_ID}-${pool_display_name_suffix}-pool" \
+    --description="Pool for ${GCP_TOOLS_PROJECT_ID}-${pool_display_name_suffix} environment"
 
   echo "Creating GitHub Provider for Pool: ${pool_id}"
   gcloud iam workload-identity-pools providers create-oidc "${GITHUB_PROVIDER_ID}" \
@@ -200,7 +183,7 @@ create_github_provider() {
 }
 
 # Create Dev Pool & Providers
-create_github_provider "${DEV_POOL_ID}" "Dev"
+create_github_provider "${DEV_POOL_ID}" "dev"
 echo "Creating Local Developer Provider for Pool: ${DEV_POOL_ID}"
 gcloud iam workload-identity-pools providers create-oidc "${LOCAL_DEV_PROVIDER_ID}" \
   --project="${PROJECT_ID}" \
@@ -214,13 +197,13 @@ gcloud iam workload-identity-pools providers create-oidc "${LOCAL_DEV_PROVIDER_I
   --attribute-condition="${DEVELOPER_ATTRIBUTE_CONDITION}"
 
 # Create Test Pool & Provider
-create_github_provider "${TEST_POOL_ID}" "Test"
+create_github_provider "${TEST_POOL_ID}" "test"
 
 # Create Sbx Pool & Provider
-create_github_provider "${SBX_POOL_ID}" "Sbx"
+create_github_provider "${SBX_POOL_ID}" "sbx"
 
 # Create Prod Pool & Provider
-create_github_provider "${PROD_POOL_ID}" "Prod"
+create_github_provider "${PROD_POOL_ID}" "prod"
 echo "-----------------------------------------------------"
 
 # --- 6. Grant Impersonation Rights ---

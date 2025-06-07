@@ -50,7 +50,23 @@ prompt_required "Enter your GCP Billing Account ID" GCP_TOOLS_BILLING_ACCOUNT
 prompt_required "Enter your company's developer identity specifier (e.g., your-domain.com)" GCP_TOOLS_DEVELOPER_IDENTITY_SPECIFIER
 prompt_required "Enter your company's GitHub identity specifier (e.g., your-org)" GCP_TOOLS_GITHUB_IDENTITY_SPECIFIER
 prompt_required "Enter a comma-separated list of owner emails" GCP_TOOLS_OWNER_EMAILS
-prompt_required "Enter a comma-separated list of GCP regions (e.g., europe-west1)" GCP_TOOLS_REGIONS
+prompt_required "Enter a comma-separated list of GCP regions (e.g., europe-west1,europe-west2)" GCP_TOOLS_REGIONS
+
+# Validate and process regions
+GCP_TOOLS_REGIONS=$(echo "$GCP_TOOLS_REGIONS" | tr -d '[:space:]')
+IFS=',' read -ra REGION_ARRAY <<< "$GCP_TOOLS_REGIONS"
+NUM_REGIONS=${#REGION_ARRAY[@]}
+
+if [ "${NUM_REGIONS}" -eq 0 ] || [ -z "${REGION_ARRAY[0]}" ]; then
+  echo "Error: At least one GCP region must be provided."
+  exit 1
+fi
+
+if [ "${NUM_REGIONS}" -gt 3 ]; then
+  echo "Error: A maximum of 3 regions can be specified."
+  exit 1
+fi
+
 prompt_required "Enter your name/identifier" GCP_TOOLS_USER
 prompt_with_default "Enter the local environment name" GCP_TOOLS_ENVIRONMENT "dev"
 
