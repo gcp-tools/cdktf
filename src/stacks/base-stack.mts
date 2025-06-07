@@ -27,15 +27,21 @@ export class BaseStack<T extends BaseStackConfig> extends TerraformStack {
     this.stackId = id
     this.stackConfig = config
 
-    this.googleProvider = new GoogleProvider(this, 'google-provider', {
-      region: envConfig.region,
-    })
+    this.googleProvider = new GoogleProvider(
+      this,
+      this.id('provider', 'google'),
+      {
+        // project: envConfig.projectId,
+        region: envConfig.regions[0],
+      },
+    )
 
     this.googleBetaProvider = new GoogleBetaProvider(
       this,
-      'google-provider-beta',
+      this.id('provider', 'google', 'beta'),
       {
-        region: envConfig.region,
+        // project: this.projectId,
+        region: envConfig.regions[0],
       },
     )
 

@@ -5,11 +5,12 @@ import { DataTerraformRemoteStateGcs } from 'cdktf'
 import type { App } from 'cdktf'
 import { envVars } from '../../utils/env.mjs'
 import { BaseInfraStack } from './base-infra-stack.mjs'
-export type IamInfraStackConfig = {}
+export type IamInfraStackConfig = {
+  region: string
+}
 
 const envConfig = {
   bucket: envVars.GCP_TOOLS_TERRAFORM_REMOTE_STATE_BUCKET_ID,
-  region: envVars.GCP_TOOLS_REGION,
 }
 
 export class IamInfraStack extends BaseInfraStack<IamInfraStackConfig> {
@@ -124,7 +125,7 @@ export class IamInfraStack extends BaseInfraStack<IamInfraStackConfig> {
       this,
       this.id('iam', 'compute', 'object', 'viewer'),
       {
-        bucket: `gcf-v2-sources-${this.appProjectNumber}-${envConfig.region}`,
+        bucket: `gcf-v2-sources-${this.appProjectNumber}-${config.region}`,
         members: [this.computeEngineServiceAgent],
         role: 'roles/storage.objectViewer',
       },

@@ -10,11 +10,10 @@ import type { App } from 'cdktf'
 import { envVars } from '../../utils/env.mjs'
 import { BaseInfraStack } from './base-infra-stack.mjs'
 
-export type NetworkInfraStackConfig = {}
+export type NetworkInfraStackConfig = Record<string, never>
 
 const envConfig = {
   bucket: envVars.GCP_TOOLS_TERRAFORM_REMOTE_STATE_BUCKET_ID,
-  region: envVars.GCP_TOOLS_REGION,
 }
 
 export class NetworkInfraStack extends BaseInfraStack<NetworkInfraStackConfig> {

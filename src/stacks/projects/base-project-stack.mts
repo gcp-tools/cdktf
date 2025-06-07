@@ -53,10 +53,11 @@ export class BaseProjectStack extends BaseStack<BaseStackConfig> {
       },
     )
 
-    const githubPrincipalAttribute =
-      envConfig.githubIdentitySpecifier.includes('/')
-        ? `attribute.repository/${envConfig.githubIdentitySpecifier}`
-        : `attribute.repository_owner/${envConfig.githubIdentitySpecifier}`
+    const githubPrincipalAttribute = envConfig.githubIdentitySpecifier.includes(
+      '/',
+    )
+      ? `attribute.repository/${envConfig.githubIdentitySpecifier}`
+      : `attribute.repository_owner/${envConfig.githubIdentitySpecifier}`
 
     const developerPrincipalAttribute =
       envConfig.developerIdentitySpecifier.includes('@')

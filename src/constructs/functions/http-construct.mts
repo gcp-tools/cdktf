@@ -12,7 +12,6 @@ import { StorageBucketObject } from '@cdktf/provider-google/lib/storage-bucket-o
 import { StorageBucket } from '@cdktf/provider-google/lib/storage-bucket/index.js'
 import type { ITerraformDependable } from 'cdktf'
 import type { AppStack } from '../../stacks/app-stack.mjs'
-import { envConfig } from '../../utils/env.mjs'
 import { BaseConstruct } from '../base-construct.mjs'
 const sourceDirectory = resolve(cwd(), '..', 'services')
 
@@ -21,6 +20,7 @@ export type HttpConstructConfig = {
   dependsOn?: ITerraformDependable[]
   grantInvokerPermissions?: string[]
   serviceConfig: Partial<Cloudfunctions2FunctionServiceConfig>
+  region: string
 }
 
 export class HttpConstruct<
@@ -42,7 +42,7 @@ export class HttpConstruct<
     this.bucket = new StorageBucket(this, bucketId, {
       dependsOn: [scope.stackServiceAccount, ...(config.dependsOn || [])],
       forceDestroy: true,
-      location: envConfig.region,
+      location: config.region,
       name: bucketId,
       project: scope.projectId,
       uniformBucketLevelAccess: true,
@@ -95,7 +95,7 @@ export class HttpConstruct<
         },
       },
       dependsOn: [this.archive],
-      location: envConfig.region,
+      location: config.region,
       name: fnId,
       project: scope.projectId,
       serviceConfig: {
@@ -127,7 +127,7 @@ export class HttpConstruct<
       this.id('binding', 'invoker'),
       {
         dependsOn: [this.fn],
-        location: envConfig.region,
+        location: config.region,
         members: [
           `serviceAccount:${scope.stackServiceAccount.email}`,
           `serviceAccount:service-${scope.projectNumber}@serverless-robot-prod.iam.gserviceaccount.com`,

@@ -82,7 +82,6 @@ import { StorageBucket } from '@cdktf/provider-google/lib/storage-bucket/index.j
 import type { ITerraformDependable } from 'cdktf'
 import { LocalExec } from 'cdktf-local-exec'
 import type { AppStack } from '../../stacks/app-stack.mjs'
-import { envConfig } from '../../utils/env.mjs'
 import { BaseConstruct } from '../base-construct.mjs'
 
 const sourceDirectory = resolve(cwd(), '..', 'services')

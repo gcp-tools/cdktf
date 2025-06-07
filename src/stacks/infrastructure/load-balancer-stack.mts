@@ -34,12 +34,14 @@
  * ```
  */
 
-import { ComputeGlobalAddress } from '@cdktf/provider-google/lib/compute-global-address'
-import { ComputeGlobalForwardingRule } from '@cdktf/provider-google/lib/compute-global-forwarding-rule'
-import { ComputeManagedSslCertificate } from '@cdktf/provider-google/lib/compute-managed-ssl-certificate'
-import { ComputeSecurityPolicy } from '@cdktf/provider-google/lib/compute-security-policy'
-import { ComputeTargetHttpsProxy } from '@cdktf/provider-google/lib/compute-target-https-proxy'
-import { ComputeUrlMap } from '@cdktf/provider-google/lib/compute-url-map'
+import {
+  computeGlobalAddress,
+  computeGlobalForwardingRule,
+  computeManagedSslCertificate,
+  computeSecurityPolicy,
+  computeTargetHttpsProxy,
+  computeUrlMap,
+} from '@cdktf/provider-google'
 import { DataTerraformRemoteStateGcs, TerraformOutput } from 'cdktf'
 import type { App } from 'cdktf'
 import { envVars } from '../../utils/env.mjs'
@@ -71,18 +73,17 @@ export type LoadBalancerStackConfig = {
 
 const envConfig = {
   bucket: envVars.GCP_TOOLS_TERRAFORM_REMOTE_STATE_BUCKET_ID,
-  region: envVars.GCP_TOOLS_REGION,
 }
 
 export class LoadBalancerStack extends BaseInfraStack<LoadBalancerStackConfig> {
   protected appProjectRemoteState: DataTerraformRemoteStateGcs
-  protected apiGatewayInfraRemoteState: DataTerraformRemoteStateGcs
-  protected urlMap: ComputeUrlMap
-  protected targetHttpsProxy: ComputeTargetHttpsProxy
-  protected globalAddress: ComputeGlobalAddress
-  protected forwardingRule: ComputeGlobalForwardingRule
-  protected sslCertificate?: ComputeManagedSslCertificate
-  protected securityPolicy?: ComputeSecurityPolicy
+  protected apiGatewayRemoteState: DataTerraformRemoteStateGcs
+  protected globalAddress: computeGlobalAddress.ComputeGlobalAddress
+  protected sslCertificate: computeManagedSslCertificate.ComputeManagedSslCertificate
+  protected securityPolicy: computeSecurityPolicy.ComputeSecurityPolicy
+  protected urlMap: computeUrlMap.ComputeUrlMap
+  protected targetProxy: computeTargetHttpsProxy.ComputeTargetHttpsProxy
+  protected forwardingRule: computeGlobalForwardingRule.ComputeGlobalForwardingRule
 
   constructor(scope: App, config: LoadBalancerStackConfig) {
     super(scope, 'load-balancer', config)
@@ -97,7 +98,7 @@ export class LoadBalancerStack extends BaseInfraStack<LoadBalancerStackConfig> {
       },
     )
 
-    this.apiGatewayInfraRemoteState = new DataTerraformRemoteStateGcs(
+    this.apiGatewayRemoteState = new DataTerraformRemoteStateGcs(
       this,
       this.id('remote', 'state', 'api-gateway'),
       {
@@ -108,61 +109,68 @@ export class LoadBalancerStack extends BaseInfraStack<LoadBalancerStackConfig> {
 
     const appProjectId = this.appProjectRemoteState.getString('project-id')
     const backendServiceId =
-      this.apiGatewayInfraRemoteState.getString('backend-service-id')
+      this.apiGatewayRemoteState.getString('backend-service-id')
 
-    // Create URL map
-    this.urlMap = new ComputeUrlMap(this, this.id('url', 'map'), {
-      name: this.id('url-map'),
-      project: appProjectId,
-      defaultService: backendServiceId,
-    })
+    // Create a global IP address
+    this.globalAddress = new computeGlobalAddress.ComputeGlobalAddress(
+      this,
+      this.id('global', 'address'),
+      {
+        name: this.id('global-ip'),
+        project: appProjectId,
+      },
+    )
 
-    // Create SSL certificate if domains are provided
-    if (config.sslConfig?.domains) {
-      this.sslCertificate = new ComputeManagedSslCertificate(
+    // Create a managed SSL certificate
+    this.sslCertificate =
+      new computeManagedSslCertificate.ComputeManagedSslCertificate(
         this,
-        this.id('ssl', 'cert'),
+        this.id('ssl', 'certificate'),
         {
           name: this.id('ssl-cert'),
           project: appProjectId,
           managed: {
-            domains: config.sslConfig.domains,
+            domains: config.sslConfig?.domains ?? [],
           },
         },
       )
-    }
 
-    // Create Cloud Armor security policy if enabled
-    if (config.securityConfig?.cloudArmor?.enabled) {
-      this.securityPolicy = new ComputeSecurityPolicy(
-        this,
-        this.id('security', 'policy'),
-        {
-          name: this.id('security-policy'),
-          project: appProjectId,
-          // Default rule to allow all traffic
-          rule: [
-            {
-              action: 'allow',
-              description: 'Default rule, higher priority overrides it',
-              match: {
-                versionedExpr: 'SRC_IPS_V1',
-                config: {
-                  srcIpRanges: ['*'],
-                },
+    // Create a security policy
+    this.securityPolicy = new computeSecurityPolicy.ComputeSecurityPolicy(
+      this,
+      this.id('security', 'policy'),
+      {
+        name: this.id('security-policy'),
+        project: appProjectId,
+        // Default rule to allow all traffic
+        rule: [
+          {
+            action: 'allow',
+            description: 'Default rule, higher priority overrides it',
+            match: {
+              versionedExpr: 'SRC_IPS_V1',
+              config: {
+                srcIpRanges: ['*'],
               },
-              priority: 2147483647,
-              preview: false,
             },
-            // Add custom rules if provided
-            ...(config.securityConfig.cloudArmor.rules || []),
-          ],
-        },
-      )
-    }
+            priority: 2147483647,
+            preview: false,
+          },
+          // Add custom rules if provided
+          ...(config.securityConfig?.cloudArmor?.rules || []),
+        ],
+      },
+    )
 
-    // Create target HTTPS proxy
-    this.targetHttpsProxy = new ComputeTargetHttpsProxy(
+    // Create a URL map
+    this.urlMap = new computeUrlMap.ComputeUrlMap(this, this.id('url', 'map'), {
+      name: this.id('lb-url-map'),
+      project: appProjectId,
+      defaultService: backendServiceId,
+    })
+
+    // Create a target HTTPS proxy
+    this.targetProxy = new computeTargetHttpsProxy.ComputeTargetHttpsProxy(
       this,
       this.id('target', 'proxy'),
       {
@@ -175,28 +183,19 @@ export class LoadBalancerStack extends BaseInfraStack<LoadBalancerStackConfig> {
       },
     )
 
-    // Create global IP address
-    this.globalAddress = new ComputeGlobalAddress(
-      this,
-      this.id('global', 'address'),
-      {
-        name: this.id('global-ip'),
-        project: appProjectId,
-      },
-    )
-
-    // Create forwarding rule
-    this.forwardingRule = new ComputeGlobalForwardingRule(
-      this,
-      this.id('forwarding', 'rule'),
-      {
-        name: this.id('forwarding-rule'),
-        project: appProjectId,
-        target: this.targetHttpsProxy.id,
-        ipAddress: this.globalAddress.address,
-        portRange: '443',
-      },
-    )
+    // Create a global forwarding rule
+    this.forwardingRule =
+      new computeGlobalForwardingRule.ComputeGlobalForwardingRule(
+        this,
+        this.id('forwarding', 'rule'),
+        {
+          name: this.id('forwarding-rule'),
+          project: appProjectId,
+          target: this.targetProxy.id,
+          ipAddress: this.globalAddress.address,
+          portRange: '443',
+        },
+      )
 
     // Outputs
     new TerraformOutput(this, 'global-ip', {

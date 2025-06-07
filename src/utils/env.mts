@@ -1,7 +1,8 @@
 import { env } from 'node:process'
 import { z } from 'zod/v4'
 
-const arraySchema = z.string()
+const arraySchema = z
+  .string()
   .transform((value) => value.split(','))
   .pipe(z.string().array())
 

@@ -23,19 +23,24 @@
  * ```
  */
 
-import { GoogleApiGatewayApi as ApiGatewayApi } from '@cdktf/provider-google-beta/lib/google-api-gateway-api'
-import { GoogleApiGatewayApiConfigA as ApiGatewayApiConfig } from '@cdktf/provider-google-beta/lib/google-api-gateway-api-config'
-import { GoogleApiGatewayGateway as ApiGatewayGateway } from '@cdktf/provider-google-beta/lib/google-api-gateway-gateway'
-import { ComputeBackendService } from '@cdktf/provider-google/lib/compute-backend-service'
-import { ComputeHealthCheck } from '@cdktf/provider-google/lib/compute-health-check'
-import { ComputeRegionNetworkEndpointGroup } from '@cdktf/provider-google/lib/compute-region-network-endpoint-group'
+import {
+  googleApiGatewayApi,
+  googleApiGatewayApiConfig,
+  googleApiGatewayGateway,
+} from '@cdktf/provider-google-beta'
+
+import {
+  computeBackendService,
+  computeHealthCheck,
+  computeRegionNetworkEndpointGroup,
+} from '@cdktf/provider-google'
 import { DataTerraformRemoteStateGcs, TerraformOutput } from 'cdktf'
 import type { App } from 'cdktf'
-import { envVars } from '../../utils/env.mjs'
+import { envConfig } from '../../utils/env.mjs'
 import { BaseInfraStack } from './base-infra-stack.mjs'
 
 export type ApiGatewayStackConfig = {
-  regions: string[]
+  // regions: string[]
   apiGatewayConfig: {
     displayName: string
     openapiDocuments: {
@@ -47,20 +52,20 @@ export type ApiGatewayStackConfig = {
   }
 }
 
-const envConfig = {
-  bucket: envVars.GCP_TOOLS_TERRAFORM_REMOTE_STATE_BUCKET_ID,
-  region: envVars.GCP_TOOLS_REGION,
-}
+// const envConfig = {
+//   bucket: envVars.GCP_TOOLS_TERRAFORM_REMOTE_STATE_BUCKET_ID,
+//   regions: envVars.GCP_TOOLS_REGIONS,
+// }
 
 export class ApiGatewayStack extends BaseInfraStack<ApiGatewayStackConfig> {
   protected appProjectRemoteState: DataTerraformRemoteStateGcs
   protected networkInfraRemoteState: DataTerraformRemoteStateGcs
-  protected apiGateway: ApiGatewayApi
-  protected apiConfig: ApiGatewayApiConfig
-  protected apiGatewayInstances: ApiGatewayGateway[]
-  protected backendService: ComputeBackendService
-  protected healthChecks: ComputeHealthCheck[]
-  protected serverlessNegs: ComputeRegionNetworkEndpointGroup[]
+  protected apiGateway: googleApiGatewayApi.GoogleApiGatewayApi
+  protected apiConfig: googleApiGatewayApiConfig.GoogleApiGatewayApiConfigA
+  protected apiGatewayInstances: googleApiGatewayGateway.GoogleApiGatewayGateway[]
+  protected backendService: computeBackendService.ComputeBackendService
+  protected healthChecks: computeHealthCheck.ComputeHealthCheck[]
+  protected serverlessNegs: computeRegionNetworkEndpointGroup.ComputeRegionNetworkEndpointGroup[]
 
   constructor(scope: App, config: ApiGatewayStackConfig) {
     super(scope, 'api-gateway', config)
@@ -85,26 +90,36 @@ export class ApiGatewayStack extends BaseInfraStack<ApiGatewayStackConfig> {
     )
 
     const appProjectId = this.appProjectRemoteState.getString('project-id')
-    const vpcId = this.networkInfraRemoteState.getString('vpc-id')
+    // const vpcId = this.networkInfraRemoteState.getString('vpc-id')
 
     // Create API Gateway
-    this.apiGateway = new ApiGatewayApi(this, this.id('api', 'gateway'), {
-      apiId: this.id('api'),
-      displayName: config.apiGatewayConfig.displayName,
-      project: appProjectId,
-    })
+    this.apiGateway = new googleApiGatewayApi.GoogleApiGatewayApi(
+      this,
+      this.id('api', 'gateway'),
+      {
+        apiId: this.id('api'),
+        displayName: config.apiGatewayConfig.displayName,
+        project: appProjectId,
+      },
+    )
 
-    this.apiConfig = new ApiGatewayApiConfig(this, this.id('api', 'config'), {
-      api: this.apiGateway.apiId,
-      apiConfigId: this.id('config'),
-      openapiDocuments: config.apiGatewayConfig.openapiDocuments.map((doc) => ({
-        document: {
-          contents: doc.document.contents,
-          path: doc.document.path,
-        },
-      })),
-      project: appProjectId,
-    })
+    this.apiConfig = new googleApiGatewayApiConfig.GoogleApiGatewayApiConfigA(
+      this,
+      this.id('api', 'config'),
+      {
+        api: this.apiGateway.apiId,
+        apiConfigId: this.id('config'),
+        openapiDocuments: config.apiGatewayConfig.openapiDocuments.map(
+          (doc) => ({
+            document: {
+              contents: doc.document.contents,
+              path: doc.document.path,
+            },
+          }),
+        ),
+        project: appProjectId,
+      },
+    )
 
     // Initialize arrays for region-specific resources
     this.apiGatewayInstances = []
@@ -112,19 +127,23 @@ export class ApiGatewayStack extends BaseInfraStack<ApiGatewayStackConfig> {
     this.serverlessNegs = []
 
     // Create region-specific resources in a single loop
-    for (const [index, region] of config.regions.entries()) {
+    for (const [index, region] of envConfig.regions.entries()) {
       // Create API Gateway instance
-      const gateway = new ApiGatewayGateway(this, `gateway-${index}`, {
-        apiConfig: this.apiConfig.id,
-        gatewayId: this.id('gateway', region),
-        project: appProjectId,
-        region,
-        displayName: `${config.apiGatewayConfig.displayName} - ${region}`,
-      })
+      const gateway = new googleApiGatewayGateway.GoogleApiGatewayGateway(
+        this,
+        `gateway-${index}`,
+        {
+          apiConfig: this.apiConfig.id,
+          gatewayId: this.id('gateway', region),
+          project: appProjectId,
+          region,
+          displayName: `${config.apiGatewayConfig.displayName} - ${region}`,
+        },
+      )
       this.apiGatewayInstances.push(gateway)
 
       // Create health check
-      const healthCheck = new ComputeHealthCheck(
+      const healthCheck = new computeHealthCheck.ComputeHealthCheck(
         this,
         `health-check-${index}`,
         {
@@ -139,20 +158,25 @@ export class ApiGatewayStack extends BaseInfraStack<ApiGatewayStackConfig> {
       this.healthChecks.push(healthCheck)
 
       // Create Serverless NEG
-      const neg = new ComputeRegionNetworkEndpointGroup(this, `neg-${index}`, {
-        name: this.id('neg', region),
-        networkEndpointType: 'SERVERLESS',
-        region,
-        project: appProjectId,
-        cloudRun: {
-          service: gateway.name,
-        },
-      })
+      const neg =
+        new computeRegionNetworkEndpointGroup.ComputeRegionNetworkEndpointGroup(
+          this,
+          `neg-${index}`,
+          {
+            name: this.id('neg', region),
+            networkEndpointType: 'SERVERLESS',
+            region,
+            project: appProjectId,
+            cloudRun: {
+              service: gateway.name,
+            },
+          },
+        )
       this.serverlessNegs.push(neg)
     }
 
     // Create a single backend service with all NEGs
-    this.backendService = new ComputeBackendService(
+    this.backendService = new computeBackendService.ComputeBackendService(
       this,
       this.id('backend', 'service'),
       {
