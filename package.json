@@ -38,15 +38,14 @@
   },
   "devDependencies": {
     "@biomejs/biome": "1.8.1",
-    "@cdktf/provider-archive": "^10.0.1",
-    "@cdktf/provider-google": "^14.36.0",
-    "@cdktf/provider-google-beta": "^14.36.0",
-    "@cdktf/provider-local": "^10.1.2",
-    "@cdktf/provider-random": "^11.1.1",
-    "@sinclair/typebox": "0.32.32",
+    "@cdktf/provider-archive": "11.0.0",
+    "@cdktf/provider-google": "16.0.0",
+    "@cdktf/provider-google-beta": "16.0.0",
+    "@cdktf/provider-local": "11.0.0",
+    "@cdktf/provider-random": "12.0.0",
     "@types/jest": "^29.5.11",
     "@types/node": "^20.14.2",
-    "cdktf": "^0.20.12",
+    "cdktf": "0.21.0",
     "constructs": "^10.4.2",
     "husky": "^9.0.10",
     "lint-staged": "^15.2.2",
@@ -69,6 +68,9 @@
     ]
   },
   "dependencies": {
-    "cdktf-local-exec": "^0.5.72"
+    "cdktf-local-exec": "^0.6.0",
+    "dotenv": "^16.4.5",
+    "lodash": "^4.17.21",
+    "zod": "^3.25.56"
   }
 }

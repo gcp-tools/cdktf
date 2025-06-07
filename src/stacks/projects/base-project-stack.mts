@@ -1,6 +1,8 @@
 import { ProjectIamBinding } from '@cdktf/provider-google/lib/project-iam-binding/index.js'
 import { ProjectService } from '@cdktf/provider-google/lib/project-service/index.js'
 import { Project } from '@cdktf/provider-google/lib/project/index.js'
+import { ServiceAccountIamBinding } from '@cdktf/provider-google/lib/service-account-iam-binding/index.js'
+import { ServiceAccount } from '@cdktf/provider-google/lib/service-account/index.js'
 import { StringResource } from '@cdktf/provider-random/lib/string-resource/index.js'
 import { TerraformOutput } from 'cdktf'
 import type { App } from 'cdktf'
@@ -39,8 +41,46 @@ export class BaseProjectStack extends BaseStack<BaseStackConfig> {
       name: this.projectName,
       orgId: envConfig.orgId,
       projectId: this.projectId,
-      skipDelete: true,
     })
+
+    const workloadServiceAccount = new ServiceAccount(
+      this,
+      this.id('sa', 'workload'),
+      {
+        accountId: 'workload-sa',
+        project: this.projectId,
+        displayName: 'Workload Service Account',
+      },
+    )
+
+    const githubPrincipalAttribute =
+      envConfig.githubIdentitySpecifier.includes('/')
+        ? `attribute.repository/${envConfig.githubIdentitySpecifier}`
+        : `attribute.repository_owner/${envConfig.githubIdentitySpecifier}`
+
+    const developerPrincipalAttribute =
+      envConfig.developerIdentitySpecifier.includes('@')
+        ? `attribute.email/${envConfig.developerIdentitySpecifier}`
+        : 'attribute.is_developer/true'
+
+    const members = envConfig.ciEnvironments.map(
+      (env) =>
+        `principalSet://iam.googleapis.com/projects/${envConfig.foundationProjectNumber}/locations/global/workloadIdentityPools/${envConfig.foundationProjectId}-${env}-pool/${githubPrincipalAttribute}`,
+    )
+    members.push(
+      `principalSet://iam.googleapis.com/projects/${envConfig.foundationProjectNumber}/locations/global/workloadIdentityPools/${envConfig.foundationProjectId}-dev-pool/${developerPrincipalAttribute}`,
+    )
+
+    new ServiceAccountIamBinding(
+      this,
+      this.id('iam', 'binding', 'workload-sa-wif'),
+      {
+        dependsOn: [workloadServiceAccount],
+        members,
+        role: 'roles/iam.workloadIdentityUser',
+        serviceAccountId: workloadServiceAccount.name,
+      },
+    )
 
     new ProjectIamBinding(this, this.id('iam', 'binding', 'owners'), {
       dependsOn: [this.project],

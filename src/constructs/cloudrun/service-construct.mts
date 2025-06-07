@@ -74,7 +74,7 @@ import { fileURLToPath } from 'node:url'
 import { DataArchiveFile } from '@cdktf/provider-archive/lib/data-archive-file/index.js'
 import { ArtifactRegistryRepository } from '@cdktf/provider-google/lib/artifact-registry-repository/index.js'
 import { CloudRunServiceIamBinding } from '@cdktf/provider-google/lib/cloud-run-service-iam-binding/index.js'
-import { CloudRunService } from '@cdktf/provider-google/lib/cloud-run-service/index.js'
+import { CloudRunV2Service } from '@cdktf/provider-google/lib/cloud-run-v2-service/index.js'
 import { ProjectIamMember } from '@cdktf/provider-google/lib/project-iam-member/index.js'
 import { StorageBucketIamBinding } from '@cdktf/provider-google/lib/storage-bucket-iam-binding/index.js'
 import { StorageBucketObject } from '@cdktf/provider-google/lib/storage-bucket-object/index.js'
@@ -96,6 +96,9 @@ export type CloudRunServiceConstructConfig = {
     timeout?: string // Build timeout (default: 10m)
     machineType?: string // Cloud Build machine type (default: E2_HIGHCPU_8)
   }
+
+  // Cloud Run configuration
+  region: string
 
   // Service configuration
   dependsOn?: ITerraformDependable[]
@@ -124,7 +127,7 @@ export class CloudRunServiceConstruct<
   protected buildStep: LocalExec
   protected cloudBuildServiceAccountBinding: ProjectIamMember
   protected invoker: CloudRunServiceIamBinding
-  public service: CloudRunService
+  public service: CloudRunV2Service
   public imageUri: string
 
   constructor(scope: AppStack, id: string, config: T) {
@@ -142,7 +145,7 @@ export class CloudRunServiceConstruct<
     this.repository = new ArtifactRegistryRepository(this, repositoryId, {
       repositoryId: repositoryId.toLowerCase(),
       format: 'DOCKER',
-      location: envConfig.region,
+      location: config.region,
       project: scope.projectId,
       description: `Container repository for ${serviceId}`,
       dependsOn: config.dependsOn || [],
@@ -157,7 +160,7 @@ export class CloudRunServiceConstruct<
         ...(config.dependsOn || []),
       ],
       forceDestroy: true,
-      location: envConfig.region,
+      location: config.region,
       name: bucketId,
       project: scope.projectId,
       uniformBucketLevelAccess: true,
@@ -223,7 +226,7 @@ export class CloudRunServiceConstruct<
       },
     )
 
-    this.imageUri = `${envConfig.region}-docker.pkg.dev/${scope.projectId}/${this.repository.name}/${serviceId}:latest`
+    this.imageUri = `${config.region}-docker.pkg.dev/${scope.projectId}/${this.repository.name}/${serviceId}:latest`
 
     // Create Cloud Build step using LocalExec
     this.buildStep = new LocalExec(this, this.id('build', 'step'), {
@@ -233,56 +236,43 @@ export class CloudRunServiceConstruct<
     })
 
     // Create Cloud Run service
-    this.service = new CloudRunService(this, serviceId, {
+    this.service = new CloudRunV2Service(this, serviceId, {
       name: serviceId,
-      location: envConfig.region,
+      location: config.region,
       project: scope.projectId,
       template: {
-        metadata: {
-          annotations: {
-            'autoscaling.knative.dev/maxScale': (
-              config.maxScale || 100
-            ).toString(),
-            'autoscaling.knative.dev/minScale': (
-              config.minScale || 0
-            ).toString(),
-            ...(config.vpcConnector
-              ? {
-                  'run.googleapis.com/vpc-access-connector':
-                    config.vpcConnector,
-                  'run.googleapis.com/vpc-access-egress':
-                    config.vpcConnectorEgressSettings || 'PRIVATE_RANGES_ONLY',
-                }
-              : {}),
-          },
+        scaling: {
+          minInstanceCount: config.minScale,
+          maxInstanceCount: config.maxScale,
         },
-        spec: {
-          containerConcurrency: config.containerConcurrency || 40,
-          timeoutSeconds: config.timeoutSeconds || 300,
-          serviceAccountName: scope.stackServiceAccount.email,
-          containers: [
-            {
-              image: this.imageUri,
-              ports: [
-                {
-                  containerPort: config.containerPort || 8080,
-                },
-              ],
-              resources: {
-                limits: {
-                  cpu: config.cpu || '1000m',
-                  memory: config.memory || '512Mi',
-                },
-              },
-              env: Object.entries(config.environmentVariables || {}).map(
-                ([name, value]) => ({
-                  name,
-                  value,
-                }),
-              ),
+        vpcAccess: {
+          connector: scope.vpcConnectorId,
+          egress: 'PRIVATE_RANGES_ONLY',
+        },
+        maxInstanceRequestConcurrency: config.containerConcurrency,
+        timeout: `${config.timeoutSeconds}s`,
+        serviceAccount: scope.stackServiceAccount.email,
+        containers: [
+          {
+            image: this.imageUri,
+            ports: {
+              containerPort: config.containerPort || 8080,
             },
-          ],
-        },
+            resources: {
+              limits: {
+                cpu: config.cpu || '1000m',
+                memory: config.memory || '512Mi',
+              },
+            },
+            env: Object.entries(config.environmentVariables || {}).map(
+              ([name, value]) => ({
+                name,
+                value,
+              }),
+            ),
+          },
+        ],
+        executionEnvironment: 'EXECUTION_ENVIRONMENT_GEN2',
       },
       timeouts: {
         create: '20m', // Longer timeout to allow for container build
@@ -297,7 +287,7 @@ export class CloudRunServiceConstruct<
       this,
       this.id('binding', 'invoker'),
       {
-        location: envConfig.region,
+        location: config.region,
         project: scope.projectId,
         service: this.service.name,
         role: 'roles/run.invoker',
