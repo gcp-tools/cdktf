@@ -111,6 +111,9 @@ gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
 gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
   --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
   --role="roles/storage.admin"
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
+  --role="roles/iam.serviceAccountAdmin"
 
 echo "### Step 4b: Assigning Organization-Level IAM Roles to ${SERVICE_ACCOUNT_EMAIL} ###"
 echo "Assigning roles/resourcemanager.projectCreator on Organization ${GCP_TOOLS_ORG_ID}"
