@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.1.3](https://github.com/gcp-tools/cdktf/compare/v1.1.2...v1.1.3) (2025-06-08)
+
+### Bug Fixes
+
+* corrects pool name in auth generation script ([341c1f6](https://github.com/gcp-tools/cdktf/commit/341c1f64a66b6be2276860b38a3df86a882d412a))
+
 ## [1.1.2](https://github.com/gcp-tools/cdktf/compare/v1.1.1...v1.1.2) (2025-06-08)
 
 ### Bug Fixes
