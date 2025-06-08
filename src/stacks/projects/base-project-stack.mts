@@ -41,6 +41,9 @@ export class BaseProjectStack extends BaseStack<BaseStackConfig> {
       name: this.projectName,
       orgId: envConfig.orgId,
       projectId: this.projectId,
+      lifecycle: {
+        preventDestroy: false,
+      },
     })
 
     const workloadServiceAccount = new ServiceAccount(
