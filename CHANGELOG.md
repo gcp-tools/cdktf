@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.2.5](https://github.com/gcp-tools/cdktf/compare/v1.2.4...v1.2.5) (2025-06-08)
+
+### Bug Fixes
+
+* emergency deletion of projects ([4c244bd](https://github.com/gcp-tools/cdktf/commit/4c244bd917dee3e43f20cfcb83d82e65c5db405e))
+
 ## [1.2.4](https://github.com/gcp-tools/cdktf/compare/v1.2.3...v1.2.4) (2025-06-08)
 
 ### Bug Fixes
