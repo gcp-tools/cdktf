@@ -57,9 +57,9 @@ export class BaseStack<T extends BaseStackConfig> extends TerraformStack {
     const { user } = this.stackConfig
     const { environment } = envConfig
     if (this.stackType === 'app' && user !== 'ci') {
-      return `${user}${delimiter}${this.stackType}${delimiter}${this.stackId}`
+      return `${envConfig.projectId}-${user}${delimiter}${this.stackType}${delimiter}${this.stackId}`
     }
-    return `${environment}${delimiter}${this.stackType}${delimiter}${this.stackId}`
+    return `${envConfig.projectId}-${environment}${delimiter}${this.stackType}${delimiter}${this.stackId}`
   }
 
   id(...tokens: string[]) {

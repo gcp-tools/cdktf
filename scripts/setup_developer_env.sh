@@ -44,6 +44,7 @@ PROJECT_ROOT=$( cd -- "$(dirname -- "${SCRIPT_DIR}")" &> /dev/null && pwd )
 
 # --- 2. Gather User Inputs ---
 echo "### Step 2: Gathering Required Information ###"
+prompt_required "Enter the GCP Project ID" GCP_TOOLS_PROJECT_ID
 prompt_required "Enter the Foundation GCP Project ID" GCP_TOOLS_FOUNDATION_PROJECT_ID
 prompt_required "Enter your GCP Organization ID" GCP_TOOLS_ORG_ID
 prompt_required "Enter your GCP Billing Account ID" GCP_TOOLS_BILLING_ACCOUNT
@@ -113,6 +114,7 @@ sed -e "s|<GCP_TOOLS_BILLING_ACCOUNT>|${GCP_TOOLS_BILLING_ACCOUNT}|g" \
     -e "s|<GCP_TOOLS_GITHUB_IDENTITY_SPECIFIER>|${GCP_TOOLS_GITHUB_IDENTITY_SPECIFIER}|g" \
     -e "s|<GCP_TOOLS_ORG_ID>|${GCP_TOOLS_ORG_ID}|g" \
     -e "s|<GCP_TOOLS_OWNER_EMAILS>|${GCP_TOOLS_OWNER_EMAILS}|g" \
+    -e "s|<GCP_TOOLS_PROJECT_ID>|${GCP_TOOLS_PROJECT_ID}|g" \
     -e "s|<GCP_TOOLS_REGIONS>|${GCP_TOOLS_REGIONS}|g" \
     -e "s|<GCP_TOOLS_TERRAFORM_REMOTE_STATE_BUCKET_ID>|${GCP_TOOLS_TERRAFORM_REMOTE_STATE_BUCKET_ID}|g" \
     -e "s|<GCP_TOOLS_USER>|${GCP_TOOLS_USER}|g" \
