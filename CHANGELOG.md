@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.2](https://github.com/gcp-tools/cdktf/compare/v1.1.1...v1.1.2) (2025-06-08)
+
+### Bug Fixes
+
+* adds project id identifier env var ([02c0758](https://github.com/gcp-tools/cdktf/commit/02c07588c6758ee0d0170f393acd241baaa5b638))
+* adds project id identifier env var ([52457af](https://github.com/gcp-tools/cdktf/commit/52457afccf4539dd9700763da0a384f80a1be282))
+
 ## [1.1.1](https://github.com/gcp-tools/cdktf/compare/v1.1.0...v1.1.1) (2025-06-08)
 
 ### Bug Fixes
