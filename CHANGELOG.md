@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.1.1](https://github.com/gcp-tools/cdktf/compare/v1.1.0...v1.1.1) (2025-06-08)
+
+### Bug Fixes
+
+* updates script to write to current working directory ([048ac56](https://github.com/gcp-tools/cdktf/commit/048ac56b4b72569bb5e47abe5398e5956804ea01))
+
 ## [1.1.0](https://github.com/gcp-tools/cdktf/compare/v1.0.1...v1.1.0) (2025-06-08)
 
 ### Features
