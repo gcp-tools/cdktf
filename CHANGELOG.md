@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.2.3](https://github.com/gcp-tools/cdktf/compare/v1.2.2...v1.2.3) (2025-06-08)
+
+### Bug Fixes
+
+* adds perms to service account ([50097ce](https://github.com/gcp-tools/cdktf/commit/50097ceecc29630ba17a9e85fc0da1a930e4902d))
+
 ## [1.2.2](https://github.com/gcp-tools/cdktf/compare/v1.2.1...v1.2.2) (2025-06-08)
 
 ### Bug Fixes
