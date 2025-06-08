@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.1.6](https://github.com/gcp-tools/cdktf/compare/v1.1.5...v1.1.6) (2025-06-08)
+
+### Bug Fixes
+
+* shortens project ids ([2bb05db](https://github.com/gcp-tools/cdktf/commit/2bb05db074799d3482781c70f54f11198b6fca2a))
+
 ## [1.1.5](https://github.com/gcp-tools/cdktf/compare/v1.1.4...v1.1.5) (2025-06-08)
 
 ### Bug Fixes
