@@ -47,8 +47,9 @@ export class BaseProjectStack extends BaseStack<BaseStackConfig> {
       this,
       this.id('sa', 'workload'),
       {
+        dependsOn: [this.project],
         accountId: 'workload-sa',
-        project: this.projectId,
+        project: this.project.projectId,
         displayName: 'Workload Service Account',
       },
     )
@@ -86,7 +87,7 @@ export class BaseProjectStack extends BaseStack<BaseStackConfig> {
     new ProjectIamBinding(this, this.id('iam', 'binding', 'owners'), {
       dependsOn: [this.project],
       members: envConfig.owners.map((owner) => `user:${owner}`),
-      project: this.projectId,
+      project: this.project.projectId,
       role: 'roles/owner',
     })
 
