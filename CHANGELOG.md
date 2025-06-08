@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.2.1](https://github.com/gcp-tools/cdktf/compare/v1.2.0...v1.2.1) (2025-06-08)
+
+### Bug Fixes
+
+* updates construct dependencies ([60b95e3](https://github.com/gcp-tools/cdktf/commit/60b95e3deb241f6f3c4ba9d8473c7cc0cb2a5395))
+
 ## [1.2.0](https://github.com/gcp-tools/cdktf/compare/v1.1.6...v1.2.0) (2025-06-08)
 
 ### Features
