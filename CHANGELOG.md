@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.1.5](https://github.com/gcp-tools/cdktf/compare/v1.1.4...v1.1.5) (2025-06-08)
+
+### Bug Fixes
+
+* corrects env var validation for environments ([1550f7c](https://github.com/gcp-tools/cdktf/commit/1550f7c0b1c1bd2e3b62056904eb09ba60ad5720))
+
 ## [1.1.4](https://github.com/gcp-tools/cdktf/compare/v1.1.3...v1.1.4) (2025-06-08)
 
 ### Bug Fixes
