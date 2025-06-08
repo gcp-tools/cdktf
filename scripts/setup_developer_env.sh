@@ -80,10 +80,10 @@ if [ -z "${GCP_TOOLS_FOUNDATION_PROJECT_NUMBER}" ]; then
 fi
 echo "Found Project Number: ${GCP_TOOLS_FOUNDATION_PROJECT_NUMBER}"
 
-SERVICE_ACCOUNT_NAME="gcp-tools-cdktf-sa"
+SERVICE_ACCOUNT_NAME="${GCP_TOOLS_PROJECT_ID}-sa"
 SERVICE_ACCOUNT_EMAIL="${SERVICE_ACCOUNT_NAME}@${GCP_TOOLS_FOUNDATION_PROJECT_ID}.iam.gserviceaccount.com"
 GCP_TOOLS_TERRAFORM_REMOTE_STATE_BUCKET_ID="${GCP_TOOLS_FOUNDATION_PROJECT_ID}-terraform-state"
-DEV_POOL_ID="dev-gcp-tools-cdktf-pool"
+DEV_POOL_ID="${GCP_TOOLS_PROJECT_ID}-dev-pool"
 LOCAL_DEV_PROVIDER_ID="local-developer-provider"
 
 # Find gcloud path. This is more robust than assuming a fixed path.
