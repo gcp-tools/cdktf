@@ -66,6 +66,7 @@ export const envConfig: EnvConfig = {
   environment: envVars.GCP_TOOLS_ENVIRONMENT,
   orgId: envVars.GCP_TOOLS_ORG_ID,
   owners: envVars.GCP_TOOLS_OWNER_EMAILS,
+  projectId: envVars.GCP_TOOLS_PROJECT_ID,
   regions: envVars.GCP_TOOLS_REGIONS,
   user: envVars.GCP_TOOLS_USER,
   foundationProjectId: envVars.GCP_TOOLS_FOUNDATION_PROJECT_ID,
