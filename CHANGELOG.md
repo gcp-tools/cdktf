@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.1](https://github.com/gcp-tools/cdktf/compare/v1.0.0...v1.0.1) (2025-06-08)
+
+### Bug Fixes
+
+* release dist directory issue ([f4386b4](https://github.com/gcp-tools/cdktf/commit/f4386b4d6d6e97232809b0ea16936640eda2c0c5))
+
 ## 1.0.0 (2025-06-07)
 
 ### Features
