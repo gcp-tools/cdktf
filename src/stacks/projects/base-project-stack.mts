@@ -112,4 +112,9 @@ export class BaseProjectStack extends BaseStack<BaseStackConfig> {
       value: this.project.number,
     })
   }
+
+  identifier() {
+    const { environment } = envConfig
+    return `${envConfig.projectId}-${environment}-${this.stackId}`
+  }
 }
