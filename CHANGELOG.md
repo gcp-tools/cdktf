@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.2.2](https://github.com/gcp-tools/cdktf/compare/v1.2.1...v1.2.2) (2025-06-08)
+
+### Bug Fixes
+
+* adds lifecycle data ([304192e](https://github.com/gcp-tools/cdktf/commit/304192efecf58f4567849939599d6cf181cf24f8))
+
 ## [1.2.1](https://github.com/gcp-tools/cdktf/compare/v1.2.0...v1.2.1) (2025-06-08)
 
 ### Bug Fixes
