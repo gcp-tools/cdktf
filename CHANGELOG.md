@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.1.0](https://github.com/gcp-tools/cdktf/compare/v1.0.1...v1.1.0) (2025-06-08)
+
+### Features
+
+* adds foundation scripting ([5ecf1f8](https://github.com/gcp-tools/cdktf/commit/5ecf1f84ce8bd18bcde8e6cc989eddeecb02f40d))
+
 ## [1.0.1](https://github.com/gcp-tools/cdktf/compare/v1.0.0...v1.0.1) (2025-06-08)
 
 ### Bug Fixes
