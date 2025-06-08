@@ -66,12 +66,12 @@ export default {
       },
     ],
     '@semantic-release/npm',
-    [
-      '@semantic-release/github',
-      {
-        assets: ['dist/**'],
-      },
-    ],
+    // [
+    //   '@semantic-release/github',
+    //   {
+    //     assets: ['dist/**'],
+    //   },
+    // ],
     [
       '@semantic-release/git',
       {

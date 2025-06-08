@@ -94,7 +94,7 @@ echo "-----------------------------------------------------"
 # --- 4. Generate .env file ---
 echo "### Step 4: Generating .env file ###"
 ENV_TEMPLATE_FILE="${PROJECT_ROOT}/templates/env.tpl"
-ENV_OUTPUT_FILE="${PROJECT_ROOT}/.env"
+ENV_OUTPUT_FILE="$(pwd)/.env"
 
 if [ ! -f "${ENV_TEMPLATE_FILE}" ]; then
   echo "Error: env template file not found at ${ENV_TEMPLATE_FILE}"
@@ -124,7 +124,7 @@ echo "-----------------------------------------------------"
 # --- 5. Generate Workload Identity Federation config file ---
 echo "### Step 5: Generating Workload Identity Federation config file ###"
 WIF_TEMPLATE_FILE="${PROJECT_ROOT}/templates/local-dev-wif.json.tpl"
-WIF_OUTPUT_FILE="${PROJECT_ROOT}/local-dev-wif.json"
+WIF_OUTPUT_FILE="$(pwd)/local-dev-wif.json"
 
 if [ ! -f "${WIF_TEMPLATE_FILE}" ]; then
   echo "Error: WIF template file not found at ${WIF_TEMPLATE_FILE}"
@@ -148,7 +148,7 @@ echo "### Developer Environment Setup Completed Successfully! ###"
 echo "Created ${WIF_OUTPUT_FILE} and ${ENV_OUTPUT_FILE}."
 echo
 echo "To activate the environment, you must first source the .env file:"
-echo "source .env"
+echo "source \"${ENV_OUTPUT_FILE}\""
 echo
 echo "Then, set the GOOGLE_APPLICATION_CREDENTIALS environment variable:"
 echo "export GOOGLE_APPLICATION_CREDENTIALS=\"${WIF_OUTPUT_FILE}\""
