@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.2.6](https://github.com/gcp-tools/cdktf/compare/v1.2.5...v1.2.6) (2025-06-09)
+
+### Bug Fixes
+
+* better name ([656d555](https://github.com/gcp-tools/cdktf/commit/656d5559fed5028c1eec280bd5628c23bfc8f51b))
+
 ## [1.2.5](https://github.com/gcp-tools/cdktf/compare/v1.2.4...v1.2.5) (2025-06-08)
 
 ### Bug Fixes
