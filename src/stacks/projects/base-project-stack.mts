@@ -70,10 +70,10 @@ export class BaseProjectStack extends BaseStack<BaseStackConfig> {
 
     const members = envConfig.ciEnvironments.map(
       (env) =>
-        `principalSet://iam.googleapis.com/projects/${envConfig.foundationProjectNumber}/locations/global/workloadIdentityPools/${envConfig.foundationProjectId}-${env}-pool/${githubPrincipalAttribute}`,
+        `principalSet://iam.googleapis.com/projects/${envConfig.foundationProjectNumber}/locations/global/workloadIdentityPools/${envConfig.projectId}-${env}-pool/${githubPrincipalAttribute}`,
     )
     members.push(
-      `principalSet://iam.googleapis.com/projects/${envConfig.foundationProjectNumber}/locations/global/workloadIdentityPools/${envConfig.foundationProjectId}-dev-pool/${developerPrincipalAttribute}`,
+      `principalSet://iam.googleapis.com/projects/${envConfig.foundationProjectNumber}/locations/global/workloadIdentityPools/${envConfig.projectId}-dev-pool/${developerPrincipalAttribute}`,
     )
 
     new ServiceAccountIamBinding(
