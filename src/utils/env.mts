@@ -8,16 +8,17 @@ const arraySchema = z
 
 export const envSchema = z.object({
   GCP_TOOLS_BILLING_ACCOUNT: z.string(),
-  GCP_TOOLS_CI_ENVIRONMENTS: z.string()
-  .transform((value) => value.split(','))
-  .pipe(
-    z.tuple([
-      z.literal('dev'),
-      z.literal('test'),
-      z.literal('sbx'),
-      z.literal('prod'),
-    ])
-  ),
+  GCP_TOOLS_CI_ENVIRONMENTS: z
+    .string()
+    .transform((value) => value.split(','))
+    .pipe(
+      z.tuple([
+        z.literal('dev'),
+        z.literal('test'),
+        z.literal('sbx'),
+        z.literal('prod'),
+      ]),
+    ),
   GCP_TOOLS_ORG_ID: z.string(),
   GCP_TOOLS_OWNER_EMAILS: arraySchema,
   GCP_TOOLS_ENVIRONMENT: z.union([

@@ -9,11 +9,13 @@
  * new NetworkInfraStack(app, {
  *   subnetworkCidr: '10.1.0.0/20',
  *   connectorCidr: '10.8.0.0/28',
- *   scalingType: 'INSTANCES',
- *   scalingData: {
- *     minInstances: 2,
- *     maxInstances: 7,
- *     machineType: 'e2-standard-4',
+ *   scaling: {
+ *     type: 'INSTANCES',
+ *     data: {
+ *       minInstances: 2,
+ *       maxInstances: 7,
+ *       machineType: 'e2-standard-4',
+ *     }
  *   }
  * })
  *
@@ -22,10 +24,12 @@
  * new NetworkInfraStack(app, {
  *   subnetworkCidr: '10.1.0.0/20',
  *   connectorCidr: '10.8.0.0/28',
- *   scalingType: 'THROUGHPUT',
- *   scalingData: {
- *     minThroughput: 200,
- *     maxThroughput: 300,
+ *   scaling: {
+ *     type: 'THROUGHPUT',
+ *     data: {
+ *       minThroughput: 200,
+ *       maxThroughput: 300,
+ *     }
  *   }
  * })
  */
@@ -41,18 +45,27 @@ import type { App } from 'cdktf'
 import { envVars } from '../../utils/env.mjs'
 import { BaseInfraStack } from './base-infra-stack.mjs'
 
-export type NetworkInfraStackConfig = {
-  subnetworkCidr: string
-  connectorCidr: string
-  scalingType: 'INSTANCES' | 'THROUGHPUT'
-  scalingData: {
+
+type Scaling = {
+  type: 'INSTANCES'
+  data: {
     minInstances: number
     maxInstances: number
     machineType?: string
-  } | {
+  }
+} | {
+  type: 'THROUGHPUT'
+  data: {
     minThroughput: number
     maxThroughput: number
   }
+}
+
+
+export type NetworkInfraStackConfig = {
+  subnetworkCidr: string
+  connectorCidr: string
+  scaling: Scaling
 }
 
 const envConfig = {
@@ -167,7 +180,7 @@ export class NetworkInfraStack extends BaseInfraStack<NetworkInfraStackConfig> {
       name: this.shortName('connector'),
       network: this.vpc.selfLink,
       project: hostProjectId,
-      ...config.scalingData,
+      ...config.scaling.data,
     })
 
     new TerraformOutput(this, 'vpc-id', {
