@@ -1,3 +1,34 @@
+/**
+ * Creates the core networking infrastructure for the platform.
+ *
+ * This stack is responsible for setting up the Shared VPC, subnetwork,
+ * NAT, router, and the Serverless VPC Access Connector.
+ *
+ * @example
+ * // Instance-based scaling
+ * new NetworkInfraStack(app, {
+ *   subnetworkCidr: '10.1.0.0/20',
+ *   connectorCidr: '10.8.0.0/28',
+ *   scalingType: 'INSTANCES',
+ *   scalingData: {
+ *     minInstances: 2,
+ *     maxInstances: 7,
+ *     machineType: 'e2-standard-4',
+ *   }
+ * })
+ *
+ * @example
+ * // Throughput-based scaling
+ * new NetworkInfraStack(app, {
+ *   subnetworkCidr: '10.1.0.0/20',
+ *   connectorCidr: '10.8.0.0/28',
+ *   scalingType: 'THROUGHPUT',
+ *   scalingData: {
+ *     minThroughput: 200,
+ *     maxThroughput: 300,
+ *   }
+ * })
+ */
 import { ComputeNetwork } from '@cdktf/provider-google/lib/compute-network/index.js'
 import { ComputeRouterNat } from '@cdktf/provider-google/lib/compute-router-nat/index.js'
 import { ComputeRouter } from '@cdktf/provider-google/lib/compute-router/index.js'
@@ -10,7 +41,19 @@ import type { App } from 'cdktf'
 import { envVars } from '../../utils/env.mjs'
 import { BaseInfraStack } from './base-infra-stack.mjs'
 
-export type NetworkInfraStackConfig = Record<string, never>
+export type NetworkInfraStackConfig = {
+  subnetworkCidr: string
+  connectorCidr: string
+  scalingType: 'INSTANCES' | 'THROUGHPUT'
+  scalingData: {
+    minInstances: number
+    maxInstances: number
+    machineType?: string
+  } | {
+    minThroughput: number
+    maxThroughput: number
+  }
+}
 
 const envConfig = {
   bucket: envVars.GCP_TOOLS_TERRAFORM_REMOTE_STATE_BUCKET_ID,
@@ -94,7 +137,7 @@ export class NetworkInfraStack extends BaseInfraStack<NetworkInfraStackConfig> {
       this.id('private', 'secondary', 'ip'),
       {
         dependsOn: [this.vpc],
-        ipCidrRange: '10.1.0.0/20',
+        ipCidrRange: config.subnetworkCidr,
         name: this.id('private', 'secondary', 'ip'),
         network: this.vpc.id,
         project: hostProjectId,
@@ -120,15 +163,11 @@ export class NetworkInfraStack extends BaseInfraStack<NetworkInfraStackConfig> {
 
     this.connector = new VpcAccessConnector(this, this.id('connector'), {
       dependsOn: [this.vpc],
-      ipCidrRange: '10.8.0.0/28',
-      // machineType: 'e2-standard-4',
-      // maxInstances: 7,
-      // maxThroughput: 700,
-      // minInstances: 2,
-      // minThroughput: 200,
+      ipCidrRange: config.connectorCidr,
       name: this.shortName('connector'),
       network: this.vpc.selfLink,
       project: hostProjectId,
+      ...config.scalingData,
     })
 
     new TerraformOutput(this, 'vpc-id', {

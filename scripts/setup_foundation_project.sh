@@ -132,11 +132,54 @@ gcloud organizations add-iam-policy-binding "${GCP_TOOLS_ORG_ID}" \
 gcloud organizations add-iam-policy-binding "${GCP_TOOLS_ORG_ID}" \
   --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
   --role="roles/resourcemanager.projectIamAdmin"
+# Grants permission to create and manage VPC networks
+gcloud organizations add-iam-policy-binding "${GCP_TOOLS_ORG_ID}" \
+  --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
+  --role="roles/compute.networkAdmin"
+# Grants permission to create and manage Serverless VPC Access Connectors
+gcloud organizations add-iam-policy-binding "${GCP_TOOLS_ORG_ID}" \
+  --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
+  --role="roles/vpcaccess.admin"
+# Grants permission to enable Shared VPC hosting
+gcloud organizations add-iam-policy-binding "${GCP_TOOLS_ORG_ID}" \
+  --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
+  --role="roles/compute.xpnAdmin"
+# Grants permission to manage Secret Manager secrets
+gcloud organizations add-iam-policy-binding "${GCP_TOOLS_ORG_ID}" \
+  --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
+  --role="roles/secretmanager.admin"
+# Grants permission to manage Cloud SQL instances
+gcloud organizations add-iam-policy-binding "${GCP_TOOLS_ORG_ID}" \
+  --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
+  --role="roles/cloudsql.admin"
+# Grants permission to manage Pub/Sub topics and subscriptions
+gcloud organizations add-iam-policy-binding "${GCP_TOOLS_ORG_ID}" \
+  --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
+  --role="roles/pubsub.admin"
+# Grants permission to manage Cloud Run services
+gcloud organizations add-iam-policy-binding "${GCP_TOOLS_ORG_ID}" \
+  --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
+  --role="roles/run.admin"
+# Grants permission to manage Cloud Functions
+gcloud organizations add-iam-policy-binding "${GCP_TOOLS_ORG_ID}" \
+  --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
+  --role="roles/cloudfunctions.admin"
+# Grants permission to manage API Gateway services
+gcloud organizations add-iam-policy-binding "${GCP_TOOLS_ORG_ID}" \
+  --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
+  --role="roles/apigateway.admin"
+# Grants permission to manage Spanner instances
+gcloud organizations add-iam-policy-binding "${GCP_TOOLS_ORG_ID}" \
+  --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
+  --role="roles/spanner.admin"
+
+
 
 echo "Assigning roles/billing.user on Billing Account ${GCP_TOOLS_BILLING_ACCOUNT}"
 gcloud billing accounts add-iam-policy-binding "${GCP_TOOLS_BILLING_ACCOUNT}" \
   --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
   --role="roles/billing.user"
+
 echo "-----------------------------------------------------"
 
 # --- 5. Create Workload Identity Pools & Providers ---
