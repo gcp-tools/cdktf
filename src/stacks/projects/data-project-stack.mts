@@ -19,11 +19,7 @@ import {
   type ProjectStackConfig,
 } from './base-project-stack.mjs'
 
-const dataProjectApis = [
-  'compute',
-  'servicenetworking',
-  'secretmanager',
-]
+const dataProjectApis = ['compute', 'servicenetworking', 'secretmanager']
 
 export class DataProjectStack extends BaseProjectStack {
   constructor(scope: App, config: ProjectStackConfig = { apis: [] }) {

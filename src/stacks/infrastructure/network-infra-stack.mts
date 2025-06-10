@@ -45,22 +45,22 @@ import type { App } from 'cdktf'
 import { envVars } from '../../utils/env.mjs'
 import { BaseInfraStack } from './base-infra-stack.mjs'
 
-
-type Scaling = {
-  type: 'INSTANCES'
-  data: {
-    minInstances: number
-    maxInstances: number
-    machineType?: string
-  }
-} | {
-  type: 'THROUGHPUT'
-  data: {
-    minThroughput: number
-    maxThroughput: number
-  }
-}
-
+type Scaling =
+  | {
+      type: 'INSTANCES'
+      data: {
+        minInstances: number
+        maxInstances: number
+        machineType?: string
+      }
+    }
+  | {
+      type: 'THROUGHPUT'
+      data: {
+        minThroughput: number
+        maxThroughput: number
+      }
+    }
 
 export type NetworkInfraStackConfig = {
   subnetworkCidr: string

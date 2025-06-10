@@ -1,8 +1,8 @@
+import type { App } from 'cdktf'
 import {
   BaseProjectStack,
   type ProjectStackConfig,
 } from './base-project-stack.mjs'
-import type { App } from 'cdktf'
 
 const hostProjectApis = [
   'apigateway',

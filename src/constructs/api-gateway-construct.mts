@@ -35,9 +35,9 @@ import {
   computeRegionNetworkEndpointGroup,
 } from '@cdktf/provider-google'
 import { TerraformOutput } from 'cdktf'
+import type { IngressStack } from '../stacks/ingress-stack.mjs'
 import { envConfig } from '../utils/env.mjs'
 import { BaseIngressConstruct } from './base-ingress-construct.mjs'
-import type { IngressStack } from '../stacks/ingress-stack.mjs'
 
 export type ApiGatewayConfig = {
   // regions: string[]

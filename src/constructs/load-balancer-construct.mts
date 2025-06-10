@@ -43,8 +43,8 @@ import {
   computeUrlMap,
 } from '@cdktf/provider-google'
 import { TerraformOutput } from 'cdktf'
-import { BaseIngressConstruct } from './base-ingress-construct.mjs'
 import type { IngressStack } from '../stacks/ingress-stack.mjs'
+import { BaseIngressConstruct } from './base-ingress-construct.mjs'
 
 export type CloudArmorRule = {
   action: string
@@ -71,7 +71,6 @@ export type LoadBalancerConfig = {
   }
 }
 
-
 export class LoadBalancerConstruct extends BaseIngressConstruct<LoadBalancerConfig> {
   protected globalAddress: computeGlobalAddress.ComputeGlobalAddress
   protected sslCertificate: computeManagedSslCertificate.ComputeManagedSslCertificate
@@ -82,7 +81,6 @@ export class LoadBalancerConstruct extends BaseIngressConstruct<LoadBalancerConf
 
   constructor(scope: IngressStack, config: LoadBalancerConfig) {
     super(scope, 'load-balancer', config)
-
 
     // Create a global IP address
     this.globalAddress = new computeGlobalAddress.ComputeGlobalAddress(

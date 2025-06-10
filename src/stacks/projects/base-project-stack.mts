@@ -13,12 +13,7 @@ export type ProjectStackConfig = {
   apis: string[]
 }
 
-const coreApis = [
-  'cloudbilling',
-  'iam',
-  'resourcemanager',
-  'serviceusage',
-]
+const coreApis = ['cloudbilling', 'iam', 'resourcemanager', 'serviceusage']
 
 export class BaseProjectStack extends BaseStack<BaseStackConfig> {
   protected project: Project

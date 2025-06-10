@@ -46,5 +46,3 @@ export class IngressStack extends BaseStack<BaseStackConfig> {
     this.hostProjectNumber = hostProjectRemoteState.getString('project-number')
   }
 }
-
-
