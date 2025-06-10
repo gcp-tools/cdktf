@@ -5,7 +5,7 @@ import { GcsBackend, TerraformStack } from 'cdktf'
 import type { Construct } from 'constructs'
 import { envConfig } from '../utils/env.mjs'
 
-export type StackType = 'project' | 'infra' | 'app'
+export type StackType = 'project' | 'infra' | 'app' | 'ingress'
 export type BaseStackConfig = {
   user: string
 }

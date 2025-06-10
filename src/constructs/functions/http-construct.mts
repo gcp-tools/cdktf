@@ -12,7 +12,7 @@ import { StorageBucketObject } from '@cdktf/provider-google/lib/storage-bucket-o
 import { StorageBucket } from '@cdktf/provider-google/lib/storage-bucket/index.js'
 import type { ITerraformDependable } from 'cdktf'
 import type { AppStack } from '../../stacks/app-stack.mjs'
-import { BaseConstruct } from '../base-construct.mjs'
+import { BaseAppConstruct } from '../base-app-construct.mjs'
 const sourceDirectory = resolve(cwd(), '..', 'services')
 
 export type HttpConstructConfig = {
@@ -25,7 +25,7 @@ export type HttpConstructConfig = {
 
 export class HttpConstruct<
   T extends HttpConstructConfig,
-> extends BaseConstruct<HttpConstructConfig> {
+> extends BaseAppConstruct<HttpConstructConfig> {
   protected archive!: StorageBucketObject
   protected archiveFile!: DataArchiveFile
   protected bucket!: StorageBucket

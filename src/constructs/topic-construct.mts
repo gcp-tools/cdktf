@@ -2,7 +2,7 @@ import { PubsubTopicIamBinding } from '@cdktf/provider-google/lib/pubsub-topic-i
 import { PubsubTopic } from '@cdktf/provider-google/lib/pubsub-topic/index.js'
 import type { ITerraformDependable } from 'cdktf'
 import type { AppStack } from '../stacks/app-stack.mjs'
-import { BaseConstruct } from './base-construct.mjs'
+import { BaseAppConstruct } from './base-app-construct.mjs'
 
 export type TopicConfig = {
   dependsOn?: ITerraformDependable[]
@@ -10,7 +10,7 @@ export type TopicConfig = {
   project: string
 }
 
-export class Topic extends BaseConstruct<TopicConfig> {
+export class Topic extends BaseAppConstruct<TopicConfig> {
   public topic: PubsubTopic
   public topicError: PubsubTopic
   protected iamBinding: PubsubTopicIamBinding

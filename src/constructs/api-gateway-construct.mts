@@ -1,14 +1,14 @@
 /**
- * API Gateway Infrastructure Stack
+ * API Gateway Construct
  *
- * This stack creates an API Gateway with regional instances and a backend service, supporting:
+ * This Construct creates an API Gateway with regional instances and a backend service, supporting:
  * - Multi-region deployment
  * - Health checks
  * - Serverless NEGs for each region
  *
  * Usage example:
  * ```typescript
- * const stack = new ApiGatewayStack(app, {
+ * const stack = new ApiGatewayConstruct(this, {
  *   regions: ['us-central1', 'us-east1'],
  *   apiGatewayConfig: {
  *     displayName: 'My API',
@@ -34,12 +34,12 @@ import {
   computeHealthCheck,
   computeRegionNetworkEndpointGroup,
 } from '@cdktf/provider-google'
-import { DataTerraformRemoteStateGcs, TerraformOutput } from 'cdktf'
-import type { App } from 'cdktf'
-import { envConfig } from '../../utils/env.mjs'
-import { BaseInfraStack } from './base-infra-stack.mjs'
+import { TerraformOutput } from 'cdktf'
+import { envConfig } from '../utils/env.mjs'
+import { BaseIngressConstruct } from './base-ingress-construct.mjs'
+import type { IngressStack } from '../stacks/ingress-stack.mjs'
 
-export type ApiGatewayStackConfig = {
+export type ApiGatewayConfig = {
   // regions: string[]
   apiGatewayConfig: {
     displayName: string
@@ -52,14 +52,7 @@ export type ApiGatewayStackConfig = {
   }
 }
 
-// const envConfig = {
-//   bucket: envVars.GCP_TOOLS_TERRAFORM_REMOTE_STATE_BUCKET_ID,
-//   regions: envVars.GCP_TOOLS_REGIONS,
-// }
-
-export class ApiGatewayStack extends BaseInfraStack<ApiGatewayStackConfig> {
-  protected appProjectRemoteState: DataTerraformRemoteStateGcs
-  protected networkInfraRemoteState: DataTerraformRemoteStateGcs
+export class ApiGatewayConstruct extends BaseIngressConstruct<ApiGatewayConfig> {
   protected apiGateway: googleApiGatewayApi.GoogleApiGatewayApi
   protected apiConfig: googleApiGatewayApiConfig.GoogleApiGatewayApiConfigA
   protected apiGatewayInstances: googleApiGatewayGateway.GoogleApiGatewayGateway[]
@@ -67,30 +60,8 @@ export class ApiGatewayStack extends BaseInfraStack<ApiGatewayStackConfig> {
   protected healthChecks: computeHealthCheck.ComputeHealthCheck[]
   protected serverlessNegs: computeRegionNetworkEndpointGroup.ComputeRegionNetworkEndpointGroup[]
 
-  constructor(scope: App, config: ApiGatewayStackConfig) {
+  constructor(scope: IngressStack, config: ApiGatewayConfig) {
     super(scope, 'api-gateway', config)
-
-    // Get remote state for app project and network
-    this.appProjectRemoteState = new DataTerraformRemoteStateGcs(
-      this,
-      this.id('remote', 'state', 'app'),
-      {
-        bucket: envConfig.bucket,
-        prefix: this.remotePrefix('project', 'app'),
-      },
-    )
-
-    this.networkInfraRemoteState = new DataTerraformRemoteStateGcs(
-      this,
-      this.id('remote', 'state', 'network'),
-      {
-        bucket: envConfig.bucket,
-        prefix: this.remotePrefix('infrastructure', 'network'),
-      },
-    )
-
-    const appProjectId = this.appProjectRemoteState.getString('project-id')
-    // const vpcId = this.networkInfraRemoteState.getString('vpc-id')
 
     // Create API Gateway
     this.apiGateway = new googleApiGatewayApi.GoogleApiGatewayApi(
@@ -99,7 +70,7 @@ export class ApiGatewayStack extends BaseInfraStack<ApiGatewayStackConfig> {
       {
         apiId: this.id('api'),
         displayName: config.apiGatewayConfig.displayName,
-        project: appProjectId,
+        project: scope.hostProjectId,
       },
     )
 
@@ -117,7 +88,7 @@ export class ApiGatewayStack extends BaseInfraStack<ApiGatewayStackConfig> {
             },
           }),
         ),
-        project: appProjectId,
+        project: scope.hostProjectId,
       },
     )
 
@@ -135,7 +106,7 @@ export class ApiGatewayStack extends BaseInfraStack<ApiGatewayStackConfig> {
         {
           apiConfig: this.apiConfig.id,
           gatewayId: this.id('gateway', region),
-          project: appProjectId,
+          project: scope.hostProjectId,
           region,
           displayName: `${config.apiGatewayConfig.displayName} - ${region}`,
         },
@@ -148,7 +119,7 @@ export class ApiGatewayStack extends BaseInfraStack<ApiGatewayStackConfig> {
         `health-check-${index}`,
         {
           name: this.id('health-check', region),
-          project: appProjectId,
+          project: scope.hostProjectId,
           httpHealthCheck: {
             port: 80,
             requestPath: '/health',
@@ -166,7 +137,7 @@ export class ApiGatewayStack extends BaseInfraStack<ApiGatewayStackConfig> {
             name: this.id('neg', region),
             networkEndpointType: 'SERVERLESS',
             region,
-            project: appProjectId,
+            project: scope.hostProjectId,
             cloudRun: {
               service: gateway.name,
             },
@@ -181,7 +152,7 @@ export class ApiGatewayStack extends BaseInfraStack<ApiGatewayStackConfig> {
       this.id('backend', 'service'),
       {
         name: this.id('backend-service'),
-        project: appProjectId,
+        project: scope.hostProjectId,
         healthChecks: this.healthChecks.map((check) => check.id),
         loadBalancingScheme: 'EXTERNAL',
         protocol: 'HTTP',

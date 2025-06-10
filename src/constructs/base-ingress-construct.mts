@@ -1,12 +1,12 @@
 import { Construct } from 'constructs'
-import type { AppStack } from '../stacks/app-stack.mjs'
+import type { IngressStack } from '../stacks/ingress-stack.mjs'
 
-export class BaseConstruct<T> extends Construct {
+export class BaseIngressConstruct<T> extends Construct {
   protected constructConfig: T
   protected constructId: string
-  protected constructScope: AppStack
+  protected constructScope: IngressStack
 
-  constructor(scope: AppStack, id: string, config: T) {
+  constructor(scope: IngressStack, id: string, config: T) {
     super(scope, id)
 
     this.constructScope = scope

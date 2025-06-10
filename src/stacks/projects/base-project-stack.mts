@@ -13,6 +13,13 @@ export type ProjectStackConfig = {
   apis: string[]
 }
 
+const coreApis = [
+  'cloudbilling',
+  'iam',
+  'resourcemanager',
+  'serviceusage',
+]
+
 export class BaseProjectStack extends BaseStack<BaseStackConfig> {
   protected project: Project
   protected projectId: string
@@ -94,7 +101,7 @@ export class BaseProjectStack extends BaseStack<BaseStackConfig> {
       role: 'roles/owner',
     })
 
-    for (const api of projectConfig.apis) {
+    for (const api of [...coreApis, ...projectConfig.apis]) {
       new ProjectService(this, this.id('service', api), {
         dependsOn: [this.project],
         disableDependentServices: true,

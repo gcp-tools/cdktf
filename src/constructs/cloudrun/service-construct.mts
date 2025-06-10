@@ -82,7 +82,7 @@ import { StorageBucket } from '@cdktf/provider-google/lib/storage-bucket/index.j
 import type { ITerraformDependable } from 'cdktf'
 import { LocalExec } from 'cdktf-local-exec'
 import type { AppStack } from '../../stacks/app-stack.mjs'
-import { BaseConstruct } from '../base-construct.mjs'
+import { BaseAppConstruct } from '../base-app-construct.mjs'
 
 const sourceDirectory = resolve(cwd(), '..', 'services')
 
@@ -118,7 +118,7 @@ export type CloudRunServiceConstructConfig = {
 
 export class CloudRunServiceConstruct<
   T extends CloudRunServiceConstructConfig,
-> extends BaseConstruct<CloudRunServiceConstructConfig> {
+> extends BaseAppConstruct<CloudRunServiceConstructConfig> {
   protected repository: ArtifactRegistryRepository
   protected bucket: StorageBucket
   protected archive: StorageBucketObject
