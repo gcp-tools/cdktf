@@ -173,8 +173,6 @@ gcloud organizations add-iam-policy-binding "${GCP_TOOLS_ORG_ID}" \
   --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
   --role="roles/spanner.admin"
 
-
-
 echo "Assigning roles/billing.user on Billing Account ${GCP_TOOLS_BILLING_ACCOUNT}"
 gcloud billing accounts add-iam-policy-binding "${GCP_TOOLS_BILLING_ACCOUNT}" \
   --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
