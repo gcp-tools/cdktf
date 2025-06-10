@@ -4,6 +4,23 @@
 
 ### Features
 
+* adds ingress constructs and stack ([6e2d728](https://github.com/gcp-tools/cdktf/commit/6e2d728c93855d35ff1fbbab670bf4ee1b5c2f82))
+* ingress mapped to host project ([1b340f1](https://github.com/gcp-tools/cdktf/commit/1b340f1ef070e6843778030b7b99dbb6a98d65e6))
+
+### Bug Fixes
+
+* fixy linty ([88e0aaf](https://github.com/gcp-tools/cdktf/commit/88e0aafd7a1fcbdde4f3dad721aa146550a06172))
+* removes spurious code ([8adcf2b](https://github.com/gcp-tools/cdktf/commit/8adcf2b1479f39734315f31b0f9f39362c7c21fc))
+
+### Chores
+
+* **release:** 1.4.0 [skip ci] ([e990bd1](https://github.com/gcp-tools/cdktf/commit/e990bd1d59bc5b4836ab69635c908c19647ce34a))
+* **release:** 1.4.0 [skip ci] ([796ef50](https://github.com/gcp-tools/cdktf/commit/796ef504620b659c8ddd8b56e75fd17f3acf6680))
+
+## [1.4.0](https://github.com/gcp-tools/cdktf/compare/v1.3.0...v1.4.0) (2025-06-10)
+
+### Features
+
 * ingress mapped to host project ([1b340f1](https://github.com/gcp-tools/cdktf/commit/1b340f1ef070e6843778030b7b99dbb6a98d65e6))
 
 ### Bug Fixes
