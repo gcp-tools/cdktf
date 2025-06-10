@@ -56,19 +56,31 @@ export class BaseStack<T extends BaseStackConfig> extends TerraformStack {
   identifier(delimiter = '-') {
     const { user } = this.stackConfig
     const { environment } = envConfig
-    if (this.stackType === 'app' && user !== 'ci') {
-      return `${envConfig.projectId}-${user}${delimiter}${this.stackType}${delimiter}${this.stackId}`
+
+    if (this.stackType === 'project') {
+      return `${envConfig.projectId}${delimiter}${environment}${delimiter}${this.stackId}`
     }
-    return `${envConfig.projectId}-${environment}${delimiter}${this.stackType}${delimiter}${this.stackId}`
+    if (this.stackType === 'app' && user !== 'ci') {
+      return `${envConfig.projectId}${delimiter}${user}${delimiter}${this.stackType}${delimiter}${this.stackId}`
+    }
+    return `${envConfig.projectId}${delimiter}${environment}${delimiter}${this.stackType}${delimiter}${this.stackId}`
+  }
+
+  remotePrefix(stackType: string, remoteId: string) {
+    const { user } = this.stackConfig
+    const { environment } = envConfig
+
+    if (stackType === 'project') {
+      return `${envConfig.projectId}/${environment}/${remoteId}`
+    }
+    if (stackType === 'app' && user !== 'ci') {
+      return `${envConfig.projectId}/${user}/${stackType}/${remoteId}`
+    }
+    return `${envConfig.projectId}/${environment}/${stackType}/${remoteId}`
   }
 
   id(...tokens: string[]) {
     return `${this.identifier()}${tokens.length ? `-${tokens.join('-')}` : ''}`
-  }
-
-  remotePrefix(stackType: string, remoteId: string) {
-    const { environment } = envConfig
-    return [environment, stackType, remoteId].join('/')
   }
 
   shortName(...tokens: string[]) {
