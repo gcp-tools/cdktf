@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.0](https://github.com/gcp-tools/cdktf/compare/v1.4.0...v1.5.0) (2025-06-10)
+
+### Features
+
+* bloody publishing ([208ad92](https://github.com/gcp-tools/cdktf/commit/208ad920094488a061b7168ef02c4b6a14cc6d5f))
+
 ## [1.4.0](https://github.com/gcp-tools/cdktf/compare/v1.3.0...v1.4.0) (2025-06-10)
 
 ### Features
