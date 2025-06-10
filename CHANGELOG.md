@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.4.0](https://github.com/gcp-tools/cdktf/compare/v1.3.0...v1.4.0) (2025-06-10)
+
+### Features
+
+* ingress mapped to host project ([1b340f1](https://github.com/gcp-tools/cdktf/commit/1b340f1ef070e6843778030b7b99dbb6a98d65e6))
+
 ## [1.3.0](https://github.com/gcp-tools/cdktf/compare/v1.2.8...v1.3.0) (2025-06-10)
 
 ### Features
