@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.2.7](https://github.com/gcp-tools/cdktf/compare/v1.2.6...v1.2.7) (2025-06-10)
+
+### Bug Fixes
+
+* revisits remote state path names ([d796a46](https://github.com/gcp-tools/cdktf/commit/d796a4692ae10dcc8e4c9a162787ddb9e5c18aef))
+
 ## [1.2.6](https://github.com/gcp-tools/cdktf/compare/v1.2.5...v1.2.6) (2025-06-09)
 
 ### Bug Fixes
