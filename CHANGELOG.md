@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.3.0](https://github.com/gcp-tools/cdktf/compare/v1.2.8...v1.3.0) (2025-06-10)
+
+### Features
+
+* update env and network infra ([0c0f51c](https://github.com/gcp-tools/cdktf/commit/0c0f51c1c2fbc9fc3323c66d17e9f2d8203bf756))
+
 ## [1.2.8](https://github.com/gcp-tools/cdktf/compare/v1.2.7...v1.2.8) (2025-06-10)
 
 ### Bug Fixes
