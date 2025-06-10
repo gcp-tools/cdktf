@@ -1,12 +1,6 @@
 import { env } from 'node:process'
 import { z } from 'zod/v4'
 
-const environments = [
-  z.literal('dev'),
-  z.literal('test'),
-  z.literal('sbx'),
-  z.literal('prod'),
-]
 const arraySchema = z
   .string()
   .transform((value) => value.split(','))
