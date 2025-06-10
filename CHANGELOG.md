@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.1](https://github.com/gcp-tools/cdktf/compare/v1.5.0...v1.5.1) (2025-06-10)
+
+### Bug Fixes
+
+* removes incorrect resource management api ([6a45432](https://github.com/gcp-tools/cdktf/commit/6a4543256ace03ca451a2bec095859cb2d79982c))
+
 ## [1.5.0](https://github.com/gcp-tools/cdktf/compare/v1.4.0...v1.5.0) (2025-06-10)
 
 ### Features
