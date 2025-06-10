@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.2.8](https://github.com/gcp-tools/cdktf/compare/v1.2.7...v1.2.8) (2025-06-10)
+
+### Bug Fixes
+
+* updates network stack configuration ([0748d1f](https://github.com/gcp-tools/cdktf/commit/0748d1f7011418121e1c2e22d0942ac759e62b1e))
+
 ## [1.2.7](https://github.com/gcp-tools/cdktf/compare/v1.2.6...v1.2.7) (2025-06-10)
 
 ### Bug Fixes
