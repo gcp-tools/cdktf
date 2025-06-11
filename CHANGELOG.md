@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.5](https://github.com/gcp-tools/cdktf/compare/v1.5.4...v1.5.5) (2025-06-11)
+
+### Bug Fixes
+
+* creates default deployment buckets for cloudfunctions ([b899c7c](https://github.com/gcp-tools/cdktf/commit/b899c7ca2f8b5b204491459687b1b35788441c21))
+
 ## [1.5.4](https://github.com/gcp-tools/cdktf/compare/v1.5.3...v1.5.4) (2025-06-11)
 
 ### Bug Fixes
