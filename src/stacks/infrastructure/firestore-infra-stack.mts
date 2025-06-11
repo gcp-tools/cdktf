@@ -32,7 +32,6 @@ import type { BaseStackConfig } from '../base-stack.mjs'
 import { BaseInfraStack } from './base-infra-stack.mjs'
 
 export type FirestoreStackConfig = BaseStackConfig & {
-  locationId: string
   name?: string
   deleteProtectionState?:
     | 'DELETE_PROTECTION_ENABLED'
@@ -68,13 +67,13 @@ export class FirestoreInfraStack extends BaseInfraStack<FirestoreStackConfig> {
       this,
       this.id('firestore', 'database'),
       {
-        project: dataProjectId,
-        name: mergedConfig.name,
-        locationId: mergedConfig.locationId,
-        type: 'FIRESTORE_NATIVE',
         deleteProtectionState: mergedConfig.deleteProtectionState,
+        locationId: envConfig.regions[0],
+        name: mergedConfig.name,
         pointInTimeRecoveryEnablement:
           mergedConfig.pointInTimeRecoveryEnablement,
+        project: dataProjectId,
+        type: 'FIRESTORE_NATIVE',
       },
     )
 
