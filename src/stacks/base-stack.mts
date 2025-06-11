@@ -6,9 +6,7 @@ import type { Construct } from 'constructs'
 import { envConfig } from '../utils/env.mjs'
 
 export type StackType = 'project' | 'infra' | 'app' | 'ingress'
-export type BaseStackConfig = {
-  user: string
-}
+export type BaseStackConfig = Record<string, unknown>
 
 export class BaseStack<T extends BaseStackConfig> extends TerraformStack {
   public googleProvider: GoogleProvider
@@ -54,7 +52,7 @@ export class BaseStack<T extends BaseStackConfig> extends TerraformStack {
   }
 
   identifier(delimiter = '-') {
-    const { user } = this.stackConfig
+    const { user } = envConfig
     const { environment } = envConfig
 
     if (this.stackType === 'project') {
@@ -67,7 +65,7 @@ export class BaseStack<T extends BaseStackConfig> extends TerraformStack {
   }
 
   remotePrefix(stackType: string, remoteId: string) {
-    const { user } = this.stackConfig
+    const { user } = envConfig
     const { environment } = envConfig
 
     // if (stackType === 'project') {
