@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.4](https://github.com/gcp-tools/cdktf/compare/v1.5.3...v1.5.4) (2025-06-11)
+
+### Bug Fixes
+
+* creates default deployment buckets for cloudrun ([2f6c28e](https://github.com/gcp-tools/cdktf/commit/2f6c28edf6415283ffae60bc56e348aa003a78e4))
+
 ## [1.5.3](https://github.com/gcp-tools/cdktf/compare/v1.5.2...v1.5.3) (2025-06-11)
 
 ### Bug Fixes
