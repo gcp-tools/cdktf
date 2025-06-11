@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.2](https://github.com/gcp-tools/cdktf/compare/v1.5.1...v1.5.2) (2025-06-11)
+
+### Bug Fixes
+
+* better use of remote prefix name ([c19282c](https://github.com/gcp-tools/cdktf/commit/c19282c5f00ce4c5cc69cfeb0b8eca3fbaf767c0))
+
 ## [1.5.1](https://github.com/gcp-tools/cdktf/compare/v1.5.0...v1.5.1) (2025-06-10)
 
 ### Bug Fixes
