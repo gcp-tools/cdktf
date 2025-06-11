@@ -42,16 +42,8 @@ export class AppProjectStack extends BaseProjectStack {
       apis: [...appProjectApis, ...config.apis],
     })
 
-    // Create the implicit bucket for Cloud Build sources to avoid race conditions.
-    // This is a single, project-wide bucket, typically in a multi-region.
-    new StorageBucket(this, 'cloudbuild-sources-bucket', {
-      name: `${this.project.number}.cloudbuild.source.googleusercontent.com`,
-      project: this.project.projectId,
-      location: 'EU', // Cloud Build default source buckets are multi-regional
-      uniformBucketLevelAccess: true,
-    })
-
     // Create the implicit buckets for Cloud Functions sources to avoid race conditions.
+    // This works because the name does not contain "google".
     for (const region of envConfig.regions) {
       new StorageBucket(this, `gcf-sources-bucket-${region}`, {
         name: `gcf-v2-sources-${this.project.number}-${region}`,
