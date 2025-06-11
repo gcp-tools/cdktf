@@ -49,7 +49,7 @@ export class BaseStack<T extends BaseStackConfig> extends TerraformStack {
 
     new GcsBackend(this, {
       bucket: envConfig.bucket,
-      prefix: this.identifier('/'),
+      prefix: this.remotePrefix(this.stackType, this.stackId),
     })
   }
 
@@ -70,9 +70,9 @@ export class BaseStack<T extends BaseStackConfig> extends TerraformStack {
     const { user } = this.stackConfig
     const { environment } = envConfig
 
-    if (stackType === 'project') {
-      return `${envConfig.projectId}/${environment}/${remoteId}`
-    }
+    // if (stackType === 'project') {
+    //   return `${envConfig.projectId}/${environment}/${remoteId}`
+    // }
     if (stackType === 'app' && user !== 'ci') {
       return `${envConfig.projectId}/${user}/${stackType}/${remoteId}`
     }
