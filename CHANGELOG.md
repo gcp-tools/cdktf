@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.3](https://github.com/gcp-tools/cdktf/compare/v1.5.2...v1.5.3) (2025-06-11)
+
+### Bug Fixes
+
+* updates config for iam stack ([71006fc](https://github.com/gcp-tools/cdktf/commit/71006fcadc72991a2ec20f4d66b003631236b3fd))
+
 ## [1.5.2](https://github.com/gcp-tools/cdktf/compare/v1.5.1...v1.5.2) (2025-06-11)
 
 ### Bug Fixes
