@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.6.1](https://github.com/gcp-tools/cdktf/compare/v1.6.0...v1.6.1) (2025-06-11)
+
+### Bug Fixes
+
+* removes user from base stack config and uses the envConfig user ([7697af6](https://github.com/gcp-tools/cdktf/commit/7697af6720ff3e6de9a586927dd1f66e57c9ab99))
+
 ## [1.6.0](https://github.com/gcp-tools/cdktf/compare/v1.5.5...v1.6.0) (2025-06-11)
 
 ### Features
