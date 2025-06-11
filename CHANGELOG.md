@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.6.2](https://github.com/gcp-tools/cdktf/compare/v1.6.1...v1.6.2) (2025-06-11)
+
+### Bug Fixes
+
+* uses env config region for firestore ([4d4bf52](https://github.com/gcp-tools/cdktf/commit/4d4bf521e939eb0d6ac838cee5e6166b9bfc6819))
+
 ## [1.6.1](https://github.com/gcp-tools/cdktf/compare/v1.6.0...v1.6.1) (2025-06-11)
 
 ### Bug Fixes
