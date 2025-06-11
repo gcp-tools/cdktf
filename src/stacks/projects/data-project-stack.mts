@@ -19,8 +19,11 @@ import {
   type ProjectStackConfig,
 } from './base-project-stack.mjs'
 
-const dataProjectApis = ['compute', 'servicenetworking', 'secretmanager']
+const dataProjectApis = ['firestore']
 
+/**
+ * A project stack for hosting data services like Firestore.
+ */
 export class DataProjectStack extends BaseProjectStack {
   constructor(scope: App, config: ProjectStackConfig = { apis: [] }) {
     super(scope, 'data', {

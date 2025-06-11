@@ -13,14 +13,11 @@ export type ProjectStackConfig = {
   apis: string[]
 }
 
-const coreApis = [
-  'cloudbilling',
-  'iam',
-  'serviceusage',
-]
+const coreApis = ['cloudbilling', 'iam', 'serviceusage']
 
 export class BaseProjectStack extends BaseStack<BaseStackConfig> {
   protected project: Project
+  protected workloadServiceAccount: ServiceAccount
   protected projectId: string
   protected projectName: string
 
@@ -52,7 +49,7 @@ export class BaseProjectStack extends BaseStack<BaseStackConfig> {
       },
     })
 
-    const workloadServiceAccount = new ServiceAccount(
+    this.workloadServiceAccount = new ServiceAccount(
       this,
       this.id('sa', 'workload'),
       {
@@ -86,10 +83,10 @@ export class BaseProjectStack extends BaseStack<BaseStackConfig> {
       this,
       this.id('iam', 'binding', 'workload-sa-wif'),
       {
-        dependsOn: [workloadServiceAccount],
+        dependsOn: [this.workloadServiceAccount],
         members,
         role: 'roles/iam.workloadIdentityUser',
-        serviceAccountId: workloadServiceAccount.name,
+        serviceAccountId: this.workloadServiceAccount.name,
       },
     )
 

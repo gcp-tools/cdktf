@@ -110,9 +110,6 @@ gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
   --role="roles/viewer"
 gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
   --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
-  --role="roles/storage.admin"
-gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-  --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
   --role="roles/iam.serviceAccountAdmin"
 
 echo "### Step 4b: Assigning Organization-Level IAM Roles to ${SERVICE_ACCOUNT_EMAIL} ###"
@@ -132,6 +129,10 @@ gcloud organizations add-iam-policy-binding "${GCP_TOOLS_ORG_ID}" \
 gcloud organizations add-iam-policy-binding "${GCP_TOOLS_ORG_ID}" \
   --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
   --role="roles/resourcemanager.projectIamAdmin"
+# Grants permission to create and manage Storage Buckets
+gcloud organizations add-iam-policy-binding "${GCP_TOOLS_ORG_ID}" \
+  --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
+  --role="roles/storage.admin"
 # Grants permission to create and manage VPC networks
 gcloud organizations add-iam-policy-binding "${GCP_TOOLS_ORG_ID}" \
   --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \

@@ -5,6 +5,7 @@ import { DataTerraformRemoteStateGcs } from 'cdktf'
 import type { App } from 'cdktf'
 import { envConfig } from '../../utils/env.mjs'
 import { BaseInfraStack } from './base-infra-stack.mjs'
+
 export type IamInfraStackConfig = Record<string, never>
 
 export class IamInfraStack extends BaseInfraStack<IamInfraStackConfig> {

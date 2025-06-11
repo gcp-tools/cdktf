@@ -10,24 +10,36 @@ import type { App } from 'cdktf'
 import { envConfig } from '../utils/env.mjs'
 import { BaseStack, type BaseStackConfig } from './base-stack.mjs'
 
-export class AppStack extends BaseStack<BaseStackConfig> {
-  protected dbInstanceId: string
-  protected dbProjectId: string
+type Database = 'alloydb' | 'bigquery' | 'cloudsql' | 'firestore' | 'spanner'
+
+export type AppStackConfig = BaseStackConfig & {
+  databases: Database[]
+}
+
+export class AppStack extends BaseStack<AppStackConfig> {
   protected appProjectRemoteState: DataTerraformRemoteStateGcs
   protected networkInfraRemoteState: DataTerraformRemoteStateGcs
-  protected sqlInfraRemoteState: DataTerraformRemoteStateGcs
 
   public projectId: string
   public projectName: string
   public projectNumber: string
-  public secret: SecretManagerSecret
   public stackServiceAccount: ServiceAccount
-  public sqlUser: SqlUser
   public vpcConnectorId: string
   public vpcProjectId: string
 
-  constructor(scope: App, id: string) {
+  protected firestoreDatabaseProjectId!: string
+  protected firestoreDatabaseName!: string
+  protected firestoreInfraRemoteState!: DataTerraformRemoteStateGcs
+
+  protected sqlDbInstanceId!: string
+  protected sqlDbProjectId!: string
+  protected sqlInfraRemoteState!: DataTerraformRemoteStateGcs
+  public sqlSecret!: SecretManagerSecret
+  public sqlUser!: SqlUser
+
+  constructor(scope: App, id: string, config: AppStackConfig) {
     super(scope, id, 'app', {
+      ...config,
       user: envConfig.user,
     })
 
@@ -51,17 +63,6 @@ export class AppStack extends BaseStack<BaseStackConfig> {
       },
     )
 
-    this.sqlInfraRemoteState = new DataTerraformRemoteStateGcs(
-      this,
-      this.id('remote', 'state', 'sql'),
-      {
-        bucket: envConfig.bucket,
-        prefix: this.remotePrefix('infra', 'sql'),
-      },
-    )
-
-    this.dbInstanceId = this.sqlInfraRemoteState.getString('db-instance-id')
-    this.dbProjectId = this.sqlInfraRemoteState.getString('db-project-id')
     this.projectId = this.appProjectRemoteState.getString('project-id')
     this.projectName = this.appProjectRemoteState.getString('project-name')
     this.projectNumber = this.appProjectRemoteState.getString('project-number')
@@ -119,53 +120,90 @@ export class AppStack extends BaseStack<BaseStackConfig> {
       },
     )
 
-    // //  this might need to move to the project app so CI/CD can federate using it
-    // new ServiceAccountIamMember(this, this.id('iam', 'workload', 'identity'), {
-    //   dependsOn: [this.stackServiceAccount],
-    //   member: serviceAccount,
-    //   role: 'roles/iam.workloadIdentityUser',
-    //   serviceAccountId: `projects/${this.projectId}/serviceAccounts/${this.stackServiceAccount.email}`,
-    // })
+    if (config.databases.includes('firestore')) {
+      this.firestoreInfraRemoteState = new DataTerraformRemoteStateGcs(
+        this,
+        this.id('remote', 'state', 'firestore'),
+        {
+          bucket: envConfig.bucket,
+          prefix: this.remotePrefix('infra', 'firestore'),
+        },
+      )
 
-    // this.stackServiceAccount.email.replace('.gserviceaccount.com', '') didn't work.
-    //  ¯\_(ツ)_/¯
-    // It's the same as this: `${this.id()}@${this.projectId}.iam`
+      this.firestoreDatabaseProjectId =
+        this.firestoreInfraRemoteState.getString(
+          'firestore-database-project-id',
+        )
+      this.firestoreDatabaseName = this.firestoreInfraRemoteState.getString(
+        'firestore-database-name',
+      )
 
-    new SqlUser(this, this.id('iam', 'service', 'account', 'user'), {
-      dependsOn: [this.stackServiceAccount],
-      instance: this.dbInstanceId,
-      name: `${this.id()}@${this.projectId}.iam`,
-      project: this.dbProjectId,
-      type: 'CLOUD_IAM_SERVICE_ACCOUNT',
-    })
+      new ProjectIamMember(
+        this,
+        this.id('iam', 'service', 'account', 'user', 'firestore'),
+        {
+          dependsOn: [this.stackServiceAccount],
+          member: serviceAccount,
+          project: this.firestoreDatabaseProjectId,
+          role: 'roles/datastore.user',
+        },
+      )
+    }
 
-    new ProjectIamMember(
-      this,
-      this.id('iam', 'service', 'account', 'user', 'sql'),
-      {
+    if (config.databases.includes('cloudsql')) {
+      this.sqlInfraRemoteState = new DataTerraformRemoteStateGcs(
+        this,
+        this.id('remote', 'state', 'sql'),
+        {
+          bucket: envConfig.bucket,
+          prefix: this.remotePrefix('infra', 'sql'),
+        },
+      )
+
+      this.sqlDbInstanceId =
+        this.sqlInfraRemoteState.getString('db-instance-id')
+      this.sqlDbProjectId = this.sqlInfraRemoteState.getString('db-project-id')
+
+      // this.stackServiceAccount.email.replace('.gserviceaccount.com', '') didn't work.
+      //  ¯\_(ツ)_/¯
+      // It's the same as this: `${this.id()}@${this.projectId}.iam`
+
+      new SqlUser(this, this.id('iam', 'service', 'account', 'user'), {
         dependsOn: [this.stackServiceAccount],
-        member: serviceAccount,
+        instance: this.sqlDbInstanceId,
+        name: `${this.id()}@${this.projectId}.iam`,
+        project: this.sqlDbProjectId,
+        type: 'CLOUD_IAM_SERVICE_ACCOUNT',
+      })
+
+      new ProjectIamMember(
+        this,
+        this.id('iam', 'service', 'account', 'user', 'sql'),
+        {
+          dependsOn: [this.stackServiceAccount],
+          member: serviceAccount,
+          project: this.projectId,
+          role: 'roles/cloudsql.client',
+        },
+      )
+
+      const sqlId = this.id('sql', 'user')
+      this.sqlUser = new SqlUser(this, sqlId, {
+        instance: this.sqlDbInstanceId,
+        name: sqlId,
+        project: this.sqlDbProjectId,
+        password: new Password(this, this.id('sql', 'user', 'password'), {
+          length: 16,
+          special: false,
+        }).result,
+      })
+
+      const secretId = this.id('secret', 'sql', 'password')
+      this.sqlSecret = new SecretManagerSecret(this, secretId, {
         project: this.projectId,
-        role: 'roles/cloudsql.client',
-      },
-    )
-
-    const sqlId = this.id('sql', 'user')
-    this.sqlUser = new SqlUser(this, sqlId, {
-      instance: this.dbInstanceId,
-      name: sqlId,
-      project: this.dbProjectId,
-      password: new Password(this, this.id('sql', 'user', 'password'), {
-        length: 16,
-        special: false,
-      }).result,
-    })
-
-    const secretId = this.id('secret', 'sql', 'password')
-    this.secret = new SecretManagerSecret(this, secretId, {
-      project: this.projectId,
-      replication: { auto: {} },
-      secretId,
-    })
+        replication: { auto: {} },
+        secretId,
+      })
+    }
   }
 }

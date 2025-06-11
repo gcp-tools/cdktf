@@ -12,13 +12,13 @@
  * ```
  */
 
+import { StorageBucket } from '@cdktf/provider-google/lib/storage-bucket/index.js'
 import type { App } from 'cdktf'
+import { envConfig } from '../../utils/env.mjs'
 import {
   BaseProjectStack,
   type ProjectStackConfig,
 } from './base-project-stack.mjs'
-import { envConfig } from '../../utils/env.mjs'
-import { StorageBucket } from '@cdktf/provider-google/lib/storage-bucket/index.js'
 
 const appProjectApis = [
   'artifactregistry',
