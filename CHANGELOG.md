@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.6.0](https://github.com/gcp-tools/cdktf/compare/v1.5.5...v1.6.0) (2025-06-11)
+
+### Features
+
+* adds firestore stack ([0fcc892](https://github.com/gcp-tools/cdktf/commit/0fcc892fd69d3715e359509ec18d1e13c00b831f))
+
 ## [1.5.5](https://github.com/gcp-tools/cdktf/compare/v1.5.4...v1.5.5) (2025-06-11)
 
 ### Bug Fixes
