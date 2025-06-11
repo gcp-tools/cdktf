@@ -3,15 +3,9 @@ import { ProjectIamMember } from '@cdktf/provider-google/lib/project-iam-member/
 import { StorageBucketIamBinding } from '@cdktf/provider-google/lib/storage-bucket-iam-binding/index.js'
 import { DataTerraformRemoteStateGcs } from 'cdktf'
 import type { App } from 'cdktf'
-import { envVars } from '../../utils/env.mjs'
+import { envConfig } from '../../utils/env.mjs'
 import { BaseInfraStack } from './base-infra-stack.mjs'
-export type IamInfraStackConfig = {
-  region: string
-}
-
-const envConfig = {
-  bucket: envVars.GCP_TOOLS_TERRAFORM_REMOTE_STATE_BUCKET_ID,
-}
+export type IamInfraStackConfig = Record<string, never>
 
 export class IamInfraStack extends BaseInfraStack<IamInfraStackConfig> {
   protected appProjectRemoteState: DataTerraformRemoteStateGcs
@@ -125,7 +119,7 @@ export class IamInfraStack extends BaseInfraStack<IamInfraStackConfig> {
       this,
       this.id('iam', 'compute', 'object', 'viewer'),
       {
-        bucket: `gcf-v2-sources-${this.appProjectNumber}-${config.region}`,
+        bucket: `gcf-v2-sources-${this.appProjectNumber}-${envConfig.regions[0]}`,
         members: [this.computeEngineServiceAgent],
         role: 'roles/storage.objectViewer',
       },
