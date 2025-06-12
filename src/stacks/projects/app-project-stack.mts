@@ -22,6 +22,7 @@ import {
 
 const appProjectApis = [
   'artifactregistry',
+  'cloudbuild',
   'cloudfunctions',
   'cloudscheduler',
   'cloudtasks',
@@ -29,6 +30,7 @@ const appProjectApis = [
   'eventarc',
   'eventarcpublishing',
   'firestore',
+  'iam',
   'logging',
   'pubsub',
   'run',

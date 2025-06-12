@@ -105,78 +105,48 @@ echo "-----------------------------------------------------"
 
 # --- 4. Assign IAM Roles to Service Account ---
 echo "### Step 4a: Assigning Project-Level IAM Roles to ${SERVICE_ACCOUNT_EMAIL} ###"
-gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-  --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
-  --role="roles/viewer"
-gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-  --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
-  --role="roles/iam.serviceAccountAdmin"
+PROJECT_ROLES=(
+  "roles/viewer"
+  "roles/iam.serviceAccountAdmin"
+)
+for role in "${PROJECT_ROLES[@]}"; do
+  echo "Assigning ${role} to ${SERVICE_ACCOUNT_EMAIL} on Project ${PROJECT_ID}"
+  gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+    --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
+    --role="${role}"
+done
 
 echo "### Step 4b: Assigning Organization-Level IAM Roles to ${SERVICE_ACCOUNT_EMAIL} ###"
-echo "Assigning roles/resourcemanager.projectCreator on Organization ${GCP_TOOLS_ORG_ID}"
-gcloud organizations add-iam-policy-binding "${GCP_TOOLS_ORG_ID}" \
-  --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
-  --role="roles/resourcemanager.projectCreator"
-gcloud organizations add-iam-policy-binding "${GCP_TOOLS_ORG_ID}" \
-  --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
-  --role="roles/resourcemanager.projectDeleter"
-gcloud organizations add-iam-policy-binding "${GCP_TOOLS_ORG_ID}" \
-  --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
-  --role="roles/iam.serviceAccountAdmin"
-gcloud organizations add-iam-policy-binding "${GCP_TOOLS_ORG_ID}" \
-  --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
-  --role="roles/serviceusage.serviceUsageAdmin"
-gcloud organizations add-iam-policy-binding "${GCP_TOOLS_ORG_ID}" \
-  --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
-  --role="roles/resourcemanager.projectIamAdmin"
-# Grants permission to create and manage Storage Buckets
-gcloud organizations add-iam-policy-binding "${GCP_TOOLS_ORG_ID}" \
-  --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
-  --role="roles/storage.admin"
-# Grants permission to create and manage VPC networks
-gcloud organizations add-iam-policy-binding "${GCP_TOOLS_ORG_ID}" \
-  --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
-  --role="roles/compute.networkAdmin"
-# Grants permission to create and manage Serverless VPC Access Connectors
-gcloud organizations add-iam-policy-binding "${GCP_TOOLS_ORG_ID}" \
-  --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
-  --role="roles/vpcaccess.admin"
-# Grants permission to enable Shared VPC hosting
-gcloud organizations add-iam-policy-binding "${GCP_TOOLS_ORG_ID}" \
-  --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
-  --role="roles/compute.xpnAdmin"
-# Grants permission to manage Secret Manager secrets
-gcloud organizations add-iam-policy-binding "${GCP_TOOLS_ORG_ID}" \
-  --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
-  --role="roles/secretmanager.admin"
-# Grants permission to manage Cloud SQL instances
-gcloud organizations add-iam-policy-binding "${GCP_TOOLS_ORG_ID}" \
-  --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
-  --role="roles/cloudsql.admin"
-# Grants permission to manage Pub/Sub topics and subscriptions
-gcloud organizations add-iam-policy-binding "${GCP_TOOLS_ORG_ID}" \
-  --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
-  --role="roles/pubsub.admin"
-# Grants permission to manage Cloud Run services
-gcloud organizations add-iam-policy-binding "${GCP_TOOLS_ORG_ID}" \
-  --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
-  --role="roles/run.admin"
-# Grants permission to manage Cloud Functions
-gcloud organizations add-iam-policy-binding "${GCP_TOOLS_ORG_ID}" \
-  --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
-  --role="roles/cloudfunctions.admin"
-# Grants permission to manage API Gateway services
-gcloud organizations add-iam-policy-binding "${GCP_TOOLS_ORG_ID}" \
-  --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
-  --role="roles/apigateway.admin"
-# Grants permission to manage Spanner instances
-gcloud organizations add-iam-policy-binding "${GCP_TOOLS_ORG_ID}" \
-  --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
-  --role="roles/spanner.admin"
-# Grants permission to manage Firestore databases
-gcloud organizations add-iam-policy-binding "${GCP_TOOLS_ORG_ID}" \
-  --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
-  --role="roles/datastore.owner"
+
+# A list of all roles to be assigned to the deployer service account at the organization level.
+ORGANIZATION_ROLES=(
+  "roles/resourcemanager.projectCreator"
+  "roles/resourcemanager.projectDeleter"
+  "roles/iam.serviceAccountAdmin"
+  "roles/serviceusage.serviceUsageAdmin"
+  "roles/resourcemanager.projectIamAdmin"
+  "roles/storage.admin"
+  "roles/compute.networkAdmin"
+  "roles/vpcaccess.admin"
+  "roles/compute.xpnAdmin"
+  "roles/secretmanager.admin"
+  "roles/cloudsql.admin"
+  "roles/pubsub.admin"
+  "roles/run.admin"
+  "roles/cloudfunctions.admin"
+  "roles/apigateway.admin"
+  "roles/spanner.admin"
+  "roles/datastore.owner"
+  "roles/artifactregistry.admin"
+)
+
+# Loop through the array and assign each role.
+for role in "${ORGANIZATION_ROLES[@]}"; do
+  echo "Assigning ${role} to ${SERVICE_ACCOUNT_EMAIL} on Organization ${GCP_TOOLS_ORG_ID}"
+  gcloud organizations add-iam-policy-binding "${GCP_TOOLS_ORG_ID}" \
+    --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
+    --role="${role}"
+done
 
 echo "Assigning roles/billing.user on Billing Account ${GCP_TOOLS_BILLING_ACCOUNT}"
 gcloud billing accounts add-iam-policy-binding "${GCP_TOOLS_BILLING_ACCOUNT}" \
