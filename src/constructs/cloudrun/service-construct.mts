@@ -270,7 +270,7 @@ export class CloudRunServiceConstruct<
         members: [`serviceAccount:${envConfig.deployerSaEmail}`],
       },
     )
-    
+
     const serviceDependencies: ITerraformDependable[] = [
       this.buildStep as unknown as ITerraformDependable,
       deployerBinding,
@@ -372,21 +372,40 @@ export class CloudRunServiceConstruct<
       .replace(/\{\{TIMEOUT\}\}/g, timeout)
 
     return `
+      set -ex
+
+      echo "---"
       echo "Starting Cloud Build for container..."
+      echo "GCloud Info:"
+      gcloud info || true
+      echo "---"
+      echo "Current directory:"
+      pwd
+      echo "---"
 
       # Ensure gcloud is configured
+      echo "Setting gcloud project..."
       gcloud config set project ${projectId}
+      echo "---"
 
       # Create temporary cloudbuild.yaml
-      cat > /tmp/cloudbuild-${this.constructId}.yaml << 'EOF'
+      TMPFILE=$(mktemp)
+      echo "Creating temporary cloudbuild.yaml at \${TMPFILE}"
+      cat > "\${TMPFILE}" << 'EOF'
 ${cloudbuildYaml}
 EOF
+      echo "---"
+      echo "File contents:"
+      cat "\${TMPFILE}"
+      echo "---"
 
       # Submit build
-      gcloud builds submit --no-source --config=/tmp/cloudbuild-${this.constructId}.yaml --project=${projectId}
+      echo "Submitting build..."
+      gcloud builds submit --no-source --config="\${TMPFILE}" --project=${projectId} --verbosity=debug
 
       # Cleanup
-      rm -f /tmp/cloudbuild-${this.constructId}.yaml
+      echo "Cleaning up temporary file..."
+      rm -f "\${TMPFILE}"
 
       echo "✅ Container build completed successfully!"
     `.trim()

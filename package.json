@@ -78,7 +78,6 @@
     "@cdktf/provider-archive": "11.0.0",
     "@cdktf/provider-google": "16.0.0",
     "@cdktf/provider-google-beta": "16.0.0",
-    "@cdktf/provider-local": "11.0.0",
     "@cdktf/provider-random": "12.0.0",
     "cdktf": "0.21.0",
     "cdktf-local-exec": "^0.6.0",
