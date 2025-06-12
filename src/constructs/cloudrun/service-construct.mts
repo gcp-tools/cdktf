@@ -2,67 +2,47 @@
  * CloudRunServiceConstruct - Deploy containerized applications to Cloud Run
  *
  * This construct provides infrastructure for building and deploying containerized
- * applications to Google Cloud Run from source code, including:
+ * applications to Google Cloud Run from a conventional source code directory
+ * (`../services/{stack-id}`). It includes:
  * - Source code packaging and upload to Cloud Storage
- * - Artifact Registry repository for container images
+ * - A dedicated Artifact Registry repository for each service's container images
  * - Automated container builds using Cloud Build
- * - Cloud Run service deployment with proper IAM
- * - VPC connector support for private networking
- *
- * This construct automatically builds containers using Cloud Build as part of
- * the deployment process from your source code directory.
+ * - Cloud Run service deployment with proper IAM and service identity
+ * - Automatic integration with the stack's VPC connector for private networking
  *
  * @example
- * // Deploy web application with automated build
- * const webApp = new cloudrun.CloudRunServiceConstruct(this, 'web-app', {
+ * // Deploy a production-ready web application with sensible defaults
+ * new cloudrun.CloudRunServiceConstruct(this, 'web-app', {
+ *   region: 'us-central1',
  *   buildConfig: {
- *     sourceDir: './my-app',
- *     dockerfile: 'Dockerfile',
- *     buildArgs: {
- *       NODE_ENV: 'production'
- *     }
+ *     machineType: 'E2_HIGHCPU_8', // Override default
  *   },
- *   environmentVariables: {
- *     DATABASE_URL: 'postgresql://user:pass@host:5432/db',
- *     API_KEY: 'your-api-key'
+ *   serviceConfig: {
+ *     environmentVariables: {
+ *       NODE_ENV: 'production',
+ *     },
+ *     minScale: 1, // Keep one instance warm to prevent cold starts
+ *     grantInvokerPermissions: ['serviceAccount:another-service@...'],
  *   },
- *   cpu: '2000m',
- *   memory: '1Gi',
- *   maxScale: 50,
- *   minScale: 1,
- *   vpcConnector: scope.vpcConnectorId,
- *   vpcConnectorEgressSettings: 'PRIVATE_RANGES_ONLY'
  * })
  *
- * // Container is automatically built and deployed with `cdktf deploy`
- *
  * @example
- * // Deploy API service with custom build configuration
- * const apiService = new cloudrun.CloudRunServiceConstruct(this, 'api', {
- *   buildConfig: {
- *     sourceDir: './backend',
- *     dockerfile: 'api.Dockerfile',
- *     buildArgs: {
- *       PORT: '8080',
- *       ENV: 'production'
- *     },
- *     timeout: '15m',
- *     machineType: 'E2_HIGHCPU_32'
+ * // Deploy an API with custom resource limits
+ * new cloudrun.CloudRunServiceConstruct(this, 'api-service', {
+ *   region: 'us-central1',
+ *   buildConfig: {},
+ *   serviceConfig: {
+ *     containerPort: 8080,
+ *     cpu: '2000m', // 2 vCPU
+ *     memory: '1Gi',
  *   },
- *   environmentVariables: {
- *     DATABASE_URL: 'postgresql://...',
- *     REDIS_URL: 'redis://...'
- *   },
- *   containerPort: 8080,
- *   cpu: '1000m',
- *   memory: '512Mi'
  * })
  *
  * @example
  * // Access the deployed service URL
  * const serviceUrl = webApp.service.status.get(0).url
  *
- * @requires Dockerfile - Your sourceDir must contain a Dockerfile
+ * @requires Dockerfile - Your source directory must contain a Dockerfile
  * @requires gcloud CLI - Must be authenticated and configured on deployment machine
  */
 
@@ -89,31 +69,29 @@ const sourceDirectory = resolve(cwd(), '..', 'services')
 export type CloudRunServiceConstructConfig = {
   // Build configuration for local source code
   buildConfig: {
-    sourceDir?: string // Local source directory (default: ../services/{stackId}/{id})
-    dockerfile?: string // Path to Dockerfile relative to sourceDir (default: Dockerfile)
-    buildArgs?: Record<string, string> // Docker build arguments
-    timeout?: string // Build timeout (default: 10m)
-    machineType?: string // Cloud Build machine type (default: E2_HIGHCPU_8)
+    buildArgs?: Record<string, string>
+    timeout?: string
+    // The Cloud Build machine type. Defaults to a smallish machine to keep costs down
+    // Override to a larger machine (e.g., 'E2_HIGHCPU_8') for production.
+    machineType?: string
   }
 
   // Cloud Run configuration
   region: string
 
   // Service configuration
-  dependsOn?: ITerraformDependable[]
-  grantInvokerPermissions?: string[]
-  environmentVariables?: Record<string, string>
-  cpu?: string
-  memory?: string
-  maxScale?: number
-  minScale?: number
-  containerPort?: number
-  containerConcurrency?: number
-  timeoutSeconds?: number
-
-  // VPC configuration
-  vpcConnector?: string
-  vpcConnectorEgressSettings?: 'ALL_TRAFFIC' | 'PRIVATE_RANGES_ONLY'
+  serviceConfig: {
+    dependsOn?: ITerraformDependable[]
+    grantInvokerPermissions?: string[]
+    environmentVariables?: Record<string, string>
+    cpu?: string
+    memory?: string
+    maxScale?: number
+    minScale?: number
+    containerPort?: number
+    containerConcurrency?: number
+    timeoutSeconds?: number
+  }
 }
 
 export class CloudRunServiceConstruct<
@@ -132,34 +110,50 @@ export class CloudRunServiceConstruct<
   constructor(scope: AppStack, id: string, config: T) {
     super(scope, id, config)
 
+    const { buildConfig, region, serviceConfig } = config
+
+    const {
+      timeout: buildTimeout = '600s',
+      machineType = 'E2_MEDIUM',
+      buildArgs = {},
+    } = buildConfig
+
+    const {
+      dependsOn = [],
+      grantInvokerPermissions = [],
+      environmentVariables = {},
+      cpu = '1000m',
+      memory = '512Mi',
+      minScale = 0,
+      maxScale = 10,
+      containerPort = 8080,
+      containerConcurrency = 80,
+      timeoutSeconds = 60,
+    } = serviceConfig
+
     const serviceId = this.id('service')
 
-    // Determine source directory
-    const sourceDir = config.buildConfig.sourceDir
-      ? resolve(config.buildConfig.sourceDir)
-      : resolve(sourceDirectory, scope.stackId, id)
+    // Determine source directory based on convention
+    const sourceDir = resolve(sourceDirectory, scope.stackId)
+    const dockerfile = 'Dockerfile'
 
     // Create Artifact Registry repository
     const repositoryId = this.id('repo')
     this.repository = new ArtifactRegistryRepository(this, repositoryId, {
       repositoryId: repositoryId.toLowerCase(),
       format: 'DOCKER',
-      location: config.region,
+      location: region,
       project: scope.projectId,
       description: `Container repository for ${serviceId}`,
-      dependsOn: config.dependsOn || [],
+      dependsOn,
     })
 
     // Create storage bucket for source code
     const bucketId = this.id('source', 'bucket')
     this.bucket = new StorageBucket(this, bucketId, {
-      dependsOn: [
-        scope.stackServiceAccount,
-        this.repository,
-        ...(config.dependsOn || []),
-      ],
+      dependsOn: [scope.stackServiceAccount, this.repository, ...dependsOn],
       forceDestroy: true,
-      location: config.region,
+      location: region,
       name: bucketId,
       project: scope.projectId,
       uniformBucketLevelAccess: true,
@@ -225,50 +219,53 @@ export class CloudRunServiceConstruct<
       },
     )
 
-    this.imageUri = `${config.region}-docker.pkg.dev/${scope.projectId}/${this.repository.name}/${serviceId}:latest`
+    this.imageUri = `${region}-docker.pkg.dev/${scope.projectId}/${this.repository.name}/${serviceId}:latest`
 
     // Create Cloud Build step using LocalExec
     this.buildStep = new LocalExec(this, this.id('build', 'step'), {
       dependsOn: [this.archive, this.cloudBuildServiceAccountBinding],
       cwd: process.cwd(),
-      command: this.generateBuildCommand(scope.projectId, config.buildConfig),
+      command: this.generateBuildCommand(scope.projectId, {
+        dockerfile,
+        timeout: buildTimeout,
+        machineType,
+        buildArgs,
+      }),
     })
 
     // Create Cloud Run service
     this.service = new CloudRunV2Service(this, serviceId, {
       name: serviceId,
-      location: config.region,
+      location: region,
       project: scope.projectId,
       template: {
         scaling: {
-          minInstanceCount: config.minScale,
-          maxInstanceCount: config.maxScale,
+          minInstanceCount: minScale,
+          maxInstanceCount: maxScale,
         },
         vpcAccess: {
           connector: scope.vpcConnectorId,
-          egress: 'PRIVATE_RANGES_ONLY',
+          egress: 'ALL_TRAFFIC',
         },
-        maxInstanceRequestConcurrency: config.containerConcurrency,
-        timeout: `${config.timeoutSeconds}s`,
+        maxInstanceRequestConcurrency: containerConcurrency,
+        timeout: `${timeoutSeconds}s`,
         serviceAccount: scope.stackServiceAccount.email,
         containers: [
           {
             image: this.imageUri,
             ports: {
-              containerPort: config.containerPort || 8080,
+              containerPort,
             },
             resources: {
               limits: {
-                cpu: config.cpu || '1000m',
-                memory: config.memory || '512Mi',
+                cpu,
+                memory,
               },
             },
-            env: Object.entries(config.environmentVariables || {}).map(
-              ([name, value]) => ({
-                name,
-                value,
-              }),
-            ),
+            env: Object.entries(environmentVariables).map(([name, value]) => ({
+              name,
+              value,
+            })),
           },
         ],
         executionEnvironment: 'EXECUTION_ENVIRONMENT_GEN2',
@@ -278,7 +275,7 @@ export class CloudRunServiceConstruct<
         update: '10m',
         delete: '5m',
       },
-      dependsOn: [this.buildStep],
+      dependsOn: [this.buildStep as unknown as ITerraformDependable],
     })
 
     // Set up IAM bindings for invoking the service
@@ -286,14 +283,14 @@ export class CloudRunServiceConstruct<
       this,
       this.id('binding', 'invoker'),
       {
-        location: config.region,
+        location: region,
         project: scope.projectId,
         service: this.service.name,
         role: 'roles/run.invoker',
         members: [
           `serviceAccount:${scope.stackServiceAccount.email}`,
           `serviceAccount:service-${scope.projectNumber}@serverless-robot-prod.iam.gserviceaccount.com`,
-          ...(config.grantInvokerPermissions || []),
+          ...grantInvokerPermissions,
         ],
         dependsOn: [this.service],
       },
@@ -302,14 +299,17 @@ export class CloudRunServiceConstruct<
 
   private generateBuildCommand(
     projectId: string,
-    buildConfig: NonNullable<T['buildConfig']>,
+    buildConfig: {
+      dockerfile: string
+      timeout: string
+      machineType: string
+      buildArgs: Record<string, string>
+    },
   ): string {
-    const dockerfile = buildConfig.dockerfile || 'Dockerfile'
-    const timeout = buildConfig.timeout || '600s'
-    const machineType = buildConfig.machineType || 'E2_HIGHCPU_8'
+    const { dockerfile, timeout, machineType, buildArgs } = buildConfig
 
     // Build arguments for docker build
-    const buildArgsLines = Object.entries(buildConfig.buildArgs || {})
+    const buildArgsLines = Object.entries(buildArgs)
       .map(([key, value]) => `      - '--build-arg=${key}=${value}'`)
       .join('\n')
 

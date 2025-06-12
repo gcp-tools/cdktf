@@ -45,12 +45,11 @@ export class FirestoreInfraStack extends BaseInfraStack<FirestoreStackConfig> {
   constructor(scope: App, config: FirestoreStackConfig) {
     super(scope, 'firestore', config)
 
-    const mergedConfig = {
-      name: '(default)',
-      deleteProtectionState: 'DELETE_PROTECTION_DISABLED',
-      pointInTimeRecoveryEnablement: 'POINT_IN_TIME_RECOVERY_DISABLED',
-      ...config,
-    }
+    const {
+      name = '(default)',
+      deleteProtectionState = 'DELETE_PROTECTION_DISABLED',
+      pointInTimeRecoveryEnablement = 'POINT_IN_TIME_RECOVERY_DISABLED',
+    } = config
 
     const dataProjectState = new DataTerraformRemoteStateGcs(
       this,
@@ -67,11 +66,10 @@ export class FirestoreInfraStack extends BaseInfraStack<FirestoreStackConfig> {
       this,
       this.id('firestore', 'database'),
       {
-        deleteProtectionState: mergedConfig.deleteProtectionState,
+        deleteProtectionState,
         locationId: envConfig.regions[0],
-        name: mergedConfig.name,
-        pointInTimeRecoveryEnablement:
-          mergedConfig.pointInTimeRecoveryEnablement,
+        name,
+        pointInTimeRecoveryEnablement,
         project: dataProjectId,
         type: 'FIRESTORE_NATIVE',
       },
