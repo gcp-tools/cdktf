@@ -46,11 +46,8 @@
  * @requires gcloud CLI - Must be authenticated and configured on deployment machine
  */
 
-import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { dirname } from 'node:path'
 import { cwd } from 'node:process'
-import { fileURLToPath } from 'node:url'
 import { DataArchiveFile } from '@cdktf/provider-archive/lib/data-archive-file/index.js'
 import { ArtifactRegistryRepository } from '@cdktf/provider-google/lib/artifact-registry-repository/index.js'
 import { CloudRunServiceIamBinding } from '@cdktf/provider-google/lib/cloud-run-service-iam-binding/index.js'
@@ -314,11 +311,7 @@ export class CloudRunServiceConstruct<
       .join('\n')
 
     // Read and substitute template
-    const currentDir = dirname(fileURLToPath(import.meta.url))
-    const templatePath = resolve(currentDir, 'cloudbuild.template.yaml')
-    const template = readFileSync(templatePath, 'utf-8')
-
-    const cloudbuildYaml = template
+    const cloudbuildYaml = cloudbuildTemplate
       .replace(/\{\{BUCKET_NAME\}\}/g, this.bucket.name)
       .replace(/\{\{ARCHIVE_NAME\}\}/g, this.archive.name)
       .replace(/\{\{IMAGE_URI\}\}/g, this.imageUri)
@@ -352,3 +345,39 @@ EOF
     `.trim()
   }
 }
+
+
+const cloudbuildTemplate = `
+steps:
+  # Download and extract source
+  - name: 'gcr.io/cloud-builders/gsutil'
+    args: ['cp', 'gs://{{BUCKET_NAME}}/{{ARCHIVE_NAME}}', '/workspace/source.zip']
+
+  - name: 'ubuntu'
+    args: ['unzip', '/workspace/source.zip', '-d', '/workspace/src']
+
+  # Build Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '{{IMAGE_URI}}'
+      - '-t'
+      - '{{IMAGE_URI_WITH_BUILD_ID}}'
+      - '-f'
+      - '/workspace/src/{{DOCKERFILE}}'
+{{BUILD_ARGS}}
+      - '/workspace/src'
+
+  # Push images
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '{{IMAGE_URI}}']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '{{IMAGE_URI_WITH_BUILD_ID}}']
+
+options:
+  machineType: '{{MACHINE_TYPE}}'
+  logging: CLOUD_LOGGING_ONLY
+timeout: '{{TIMEOUT}}'
+`
