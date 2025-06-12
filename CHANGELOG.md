@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.8.0](https://github.com/gcp-tools/cdktf/compare/v1.7.1...v1.8.0) (2025-06-12)
+
+### Features
+
+* adds null provider ([a6988bd](https://github.com/gcp-tools/cdktf/commit/a6988bdd08360b2757e8f5c0fb0c16e989b18297))
+
 ## [1.7.1](https://github.com/gcp-tools/cdktf/compare/v1.7.0...v1.7.1) (2025-06-12)
 
 ### Bug Fixes
