@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.9.0](https://github.com/gcp-tools/cdktf/compare/v1.8.3...v1.9.0) (2025-06-12)
+
+### Features
+
+* more fuckwittery with permissions ([14c1078](https://github.com/gcp-tools/cdktf/commit/14c107875dba16871d26fba3f65817ac1a5c76f2))
+
 ## [1.8.3](https://github.com/gcp-tools/cdktf/compare/v1.8.2...v1.8.3) (2025-06-12)
 
 ### Bug Fixes
