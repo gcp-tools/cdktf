@@ -19,11 +19,7 @@ import {
   type ProjectStackConfig,
 } from './base-project-stack.mjs'
 
-const dataProjectApis = [
-  'compute',
-  'servicenetworking',
-  'secretmanager',
-]
+const dataProjectApis = ['compute', 'servicenetworking', 'secretmanager']
 
 /**
  * A project stack for hosting data services like Firestore.

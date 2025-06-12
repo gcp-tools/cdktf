@@ -53,15 +53,16 @@ import { ArtifactRegistryRepository } from '@cdktf/provider-google/lib/artifact-
 import { CloudRunServiceIamBinding } from '@cdktf/provider-google/lib/cloud-run-service-iam-binding/index.js'
 import { CloudRunV2Service } from '@cdktf/provider-google/lib/cloud-run-v2-service/index.js'
 import { ProjectIamMember } from '@cdktf/provider-google/lib/project-iam-member/index.js'
+import { ServiceAccountIamBinding } from '@cdktf/provider-google/lib/service-account-iam-binding/index.js'
 import { StorageBucketIamBinding } from '@cdktf/provider-google/lib/storage-bucket-iam-binding/index.js'
 import { StorageBucketObject } from '@cdktf/provider-google/lib/storage-bucket-object/index.js'
 import { StorageBucket } from '@cdktf/provider-google/lib/storage-bucket/index.js'
-import { ServiceAccountIamBinding } from '@cdktf/provider-google/lib/service-account-iam-binding/index.js'
+import { File } from '@cdktf/provider-local/lib/file/index.js'
 import type { ITerraformDependable } from 'cdktf'
 import { LocalExec } from 'cdktf-local-exec'
 import type { AppStack } from '../../stacks/app-stack.mjs'
-import { BaseAppConstruct } from '../base-app-construct.mjs'
 import { envConfig } from '../../utils/env.mjs'
+import { BaseAppConstruct } from '../base-app-construct.mjs'
 
 const sourceDirectory = resolve(cwd(), '..', '..', 'services')
 
@@ -101,6 +102,7 @@ export class CloudRunServiceConstruct<
   protected bucket: StorageBucket
   protected archive: StorageBucketObject
   protected archiveFile: DataArchiveFile
+  protected buildConfigFile: File
   protected buildStep: LocalExec
   protected cloudBuildServiceAccountBinding: ProjectIamMember
   protected invoker: CloudRunServiceIamBinding
@@ -246,16 +248,36 @@ export class CloudRunServiceConstruct<
 
     this.imageUri = `${region}-docker.pkg.dev/${scope.projectId}/${this.repository.name}/${serviceId}:latest`
 
+    // Define path for the build config file
+    const buildConfigPath = resolve(
+      '.',
+      'cdktf.out',
+      'build-configs',
+      `${this.constructId}.yaml`,
+    )
+
+    // Generate the content for the cloudbuild.yaml file
+    const cloudbuildYaml = this.generateBuildYaml({
+      dockerfile,
+      timeout: buildTimeout,
+      machineType,
+      buildArgs,
+    })
+
+    // Create the build config file using the 'local' provider
+    this.buildConfigFile = new File(this, this.id('build', 'config', 'file'), {
+      content: cloudbuildYaml,
+      filename: buildConfigPath,
+    })
+
     // Create Cloud Build step using LocalExec
     this.buildStep = new LocalExec(this, this.id('build', 'step'), {
-      dependsOn: [this.archive, this.cloudBuildServiceAccountBinding],
-      cwd: process.cwd(),
-      command: this.generateBuildCommand(scope.projectId, {
-        dockerfile,
-        timeout: buildTimeout,
-        machineType,
-        buildArgs,
-      }),
+      dependsOn: [
+        this.archive,
+        this.cloudBuildServiceAccountBinding,
+        this.buildConfigFile,
+      ],
+      command: `gcloud builds submit --no-source --config="${this.buildConfigFile.filename}" --project=${scope.projectId} --verbosity=debug`,
     })
 
     // Grant the deployer SA permission to act as the Cloud Run SA.
@@ -275,7 +297,6 @@ export class CloudRunServiceConstruct<
       this.buildStep as unknown as ITerraformDependable,
       deployerBinding,
     ]
-
 
     // Create Cloud Run service
     this.service = new CloudRunV2Service(this, serviceId, {
@@ -341,15 +362,12 @@ export class CloudRunServiceConstruct<
     )
   }
 
-  private generateBuildCommand(
-    projectId: string,
-    buildConfig: {
-      dockerfile: string
-      timeout: string
-      machineType: string
-      buildArgs: Record<string, string>
-    },
-  ): string {
+  private generateBuildYaml(buildConfig: {
+    dockerfile: string
+    timeout: string
+    machineType: string
+    buildArgs: Record<string, string>
+  }): string {
     const { dockerfile, timeout, machineType, buildArgs } = buildConfig
 
     // Build arguments for docker build
@@ -357,61 +375,20 @@ export class CloudRunServiceConstruct<
       .map(([key, value]) => `      - '--build-arg=${key}=${value}'`)
       .join('\n')
 
+    const imageUriWithBuildId = this.imageUri.replace(':latest', ':$BUILD_ID')
+
     // Read and substitute template
-    const cloudbuildYaml = cloudbuildTemplate
+    return cloudbuildTemplate
       .replace(/\{\{BUCKET_NAME\}\}/g, this.bucket.name)
       .replace(/\{\{ARCHIVE_NAME\}\}/g, this.archive.name)
       .replace(/\{\{IMAGE_URI\}\}/g, this.imageUri)
-      .replace(
-        /\{\{IMAGE_URI_WITH_BUILD_ID\}\}/g,
-        this.imageUri.replace(':latest', ':$BUILD_ID'),
-      )
+      .replace(/\{\{IMAGE_URI_WITH_BUILD_ID\}\}/g, imageUriWithBuildId)
       .replace(/\{\{DOCKERFILE\}\}/g, dockerfile)
       .replace(/\{\{BUILD_ARGS\}\}/g, buildArgsLines)
       .replace(/\{\{MACHINE_TYPE\}\}/g, machineType)
       .replace(/\{\{TIMEOUT\}\}/g, timeout)
-
-    return `
-      set -ex
-
-      echo "---"
-      echo "Starting Cloud Build for container..."
-      echo "GCloud Info:"
-      gcloud info || true
-      echo "---"
-      echo "Current directory:"
-      pwd
-      echo "---"
-
-      # Ensure gcloud is configured
-      echo "Setting gcloud project..."
-      gcloud config set project ${projectId}
-      echo "---"
-
-      # Create temporary cloudbuild.yaml
-      TMPFILE=$(mktemp)
-      echo "Creating temporary cloudbuild.yaml at \${TMPFILE}"
-      cat > "\${TMPFILE}" << 'EOF'
-${cloudbuildYaml}
-EOF
-      echo "---"
-      echo "File contents:"
-      cat "\${TMPFILE}"
-      echo "---"
-
-      # Submit build
-      echo "Submitting build..."
-      gcloud builds submit --no-source --config="\${TMPFILE}" --project=${projectId} --verbosity=debug
-
-      # Cleanup
-      echo "Cleaning up temporary file..."
-      rm -f "\${TMPFILE}"
-
-      echo "✅ Container build completed successfully!"
-    `.trim()
   }
 }
-
 
 const cloudbuildTemplate = `
 steps:
