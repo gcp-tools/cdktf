@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.7.1](https://github.com/gcp-tools/cdktf/compare/v1.7.0...v1.7.1) (2025-06-12)
+
+### Bug Fixes
+
+* embeds template ([724a714](https://github.com/gcp-tools/cdktf/commit/724a714f21a09fa75b0cfab685960c0aa1977bcb))
+
 ## [1.7.0](https://github.com/gcp-tools/cdktf/compare/v1.6.2...v1.7.0) (2025-06-12)
 
 ### Features
