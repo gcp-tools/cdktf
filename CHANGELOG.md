@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.8.2](https://github.com/gcp-tools/cdktf/compare/v1.8.1...v1.8.2) (2025-06-12)
+
+### Bug Fixes
+
+* adds cloudbuild and iam api ([a3ed457](https://github.com/gcp-tools/cdktf/commit/a3ed4576940c1ef51aaf85137468d35c3492eaa8))
+
 ## [1.8.1](https://github.com/gcp-tools/cdktf/compare/v1.8.0...v1.8.1) (2025-06-12)
 
 ### Bug Fixes
