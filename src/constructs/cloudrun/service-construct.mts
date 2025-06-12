@@ -56,6 +56,7 @@ import { ProjectIamMember } from '@cdktf/provider-google/lib/project-iam-member/
 import { StorageBucketIamBinding } from '@cdktf/provider-google/lib/storage-bucket-iam-binding/index.js'
 import { StorageBucketObject } from '@cdktf/provider-google/lib/storage-bucket-object/index.js'
 import { StorageBucket } from '@cdktf/provider-google/lib/storage-bucket/index.js'
+import { ServiceAccountIamBinding } from '@cdktf/provider-google/lib/service-account-iam-binding/index.js'
 import type { ITerraformDependable } from 'cdktf'
 import { LocalExec } from 'cdktf-local-exec'
 import type { AppStack } from '../../stacks/app-stack.mjs'
@@ -247,6 +248,15 @@ export class CloudRunServiceConstruct<
         role: 'roles/storage.objectViewer',
       },
     )
+
+    // Grant Cloud Build SA permission to act as the stack's SA
+    const cloudBuildServiceAgent = `serviceAccount:${scope.projectNumber}@cloudbuild.gserviceaccount.com`
+    new ServiceAccountIamBinding(this, this.id('cloudbuild', 'sa', 'user'), {
+      serviceAccountId: scope.stackServiceAccount.id,
+      role: 'roles/iam.serviceAccountUser',
+      members: [cloudBuildServiceAgent],
+      dependsOn: [this.cloudBuildServiceAccountBinding],
+    })
 
     this.imageUri = `${region}-docker.pkg.dev/${scope.projectId}/${this.repository.name}/${serviceId}:latest`
 
