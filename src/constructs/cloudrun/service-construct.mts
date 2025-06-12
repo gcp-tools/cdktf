@@ -61,6 +61,7 @@ import type { ITerraformDependable } from 'cdktf'
 import { LocalExec } from 'cdktf-local-exec'
 import type { AppStack } from '../../stacks/app-stack.mjs'
 import { BaseAppConstruct } from '../base-app-construct.mjs'
+import { envConfig } from '../../utils/env.mjs'
 
 const sourceDirectory = resolve(cwd(), '..', '..', 'services')
 
@@ -89,12 +90,6 @@ export type CloudRunServiceConstructConfig = {
     containerPort?: number
     containerConcurrency?: number
     timeoutSeconds?: number
-    /**
-     * The number of container images to keep in Artifact Registry.
-     * Older images will be automatically deleted.
-     * Defaults to 20. Set to 0 to disable cleanup.
-     * @default 20
-     */
     imageRetentionCount?: number
   }
 }
@@ -249,15 +244,6 @@ export class CloudRunServiceConstruct<
       },
     )
 
-    // Grant Cloud Build SA permission to act as the stack's SA
-    const cloudBuildServiceAgent = `serviceAccount:${scope.projectNumber}@cloudbuild.gserviceaccount.com`
-    new ServiceAccountIamBinding(this, this.id('cloudbuild', 'sa', 'user'), {
-      serviceAccountId: scope.stackServiceAccount.id,
-      role: 'roles/iam.serviceAccountUser',
-      members: [cloudBuildServiceAgent],
-      dependsOn: [this.cloudBuildServiceAccountBinding],
-    })
-
     this.imageUri = `${region}-docker.pkg.dev/${scope.projectId}/${this.repository.name}/${serviceId}:latest`
 
     // Create Cloud Build step using LocalExec
@@ -271,6 +257,25 @@ export class CloudRunServiceConstruct<
         buildArgs,
       }),
     })
+
+    // Grant the deployer SA permission to act as the Cloud Run SA.
+    // This is necessary for CI/CD pipelines where the deployer identity is different
+    // from the service's runtime identity. The email is passed via an env var.
+    const deployerBinding = new ServiceAccountIamBinding(
+      this,
+      this.id('deployer', 'sa', 'user'),
+      {
+        serviceAccountId: scope.stackServiceAccount.id,
+        role: 'roles/iam.serviceAccountUser',
+        members: [`serviceAccount:${envConfig.deployerSaEmail}`],
+      },
+    )
+    
+    const serviceDependencies: ITerraformDependable[] = [
+      this.buildStep as unknown as ITerraformDependable,
+      deployerBinding,
+    ]
+
 
     // Create Cloud Run service
     this.service = new CloudRunV2Service(this, serviceId, {
@@ -314,7 +319,7 @@ export class CloudRunServiceConstruct<
         update: '10m',
         delete: '5m',
       },
-      dependsOn: [this.buildStep as unknown as ITerraformDependable],
+      dependsOn: serviceDependencies,
     })
 
     // Set up IAM bindings for invoking the service

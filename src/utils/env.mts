@@ -35,6 +35,7 @@ export const envSchema = z.object({
   GCP_TOOLS_FOUNDATION_PROJECT_NUMBER: z.string(),
   GCP_TOOLS_GITHUB_IDENTITY_SPECIFIER: z.string(),
   GCP_TOOLS_DEVELOPER_IDENTITY_SPECIFIER: z.string(),
+  GCP_TOOLS_SERVICE_ACCOUNT_EMAIL: z.string(),
 })
 
 export type Env = z.infer<typeof envSchema>
@@ -52,6 +53,7 @@ export type EnvConfig = {
   foundationProjectNumber: string
   githubIdentitySpecifier: string
   developerIdentitySpecifier: string
+  deployerSaEmail: string
 }
 
 const parsedResult = envSchema.safeParse(env)
@@ -78,4 +80,5 @@ export const envConfig: EnvConfig = {
   foundationProjectNumber: envVars.GCP_TOOLS_FOUNDATION_PROJECT_NUMBER,
   githubIdentitySpecifier: envVars.GCP_TOOLS_GITHUB_IDENTITY_SPECIFIER,
   developerIdentitySpecifier: envVars.GCP_TOOLS_DEVELOPER_IDENTITY_SPECIFIER,
+  deployerSaEmail: envVars.GCP_TOOLS_SERVICE_ACCOUNT_EMAIL,
 }
