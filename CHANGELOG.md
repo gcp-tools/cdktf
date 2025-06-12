@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.10.0](https://github.com/gcp-tools/cdktf/compare/v1.9.1...v1.10.0) (2025-06-12)
+
+### Features
+
+* adds better support for scripting ([53f29e5](https://github.com/gcp-tools/cdktf/commit/53f29e5573c3ca721fe7958f07e6dc6e8089b914))
+
+### Bug Fixes
+
+* updates package-lock ([1ffc662](https://github.com/gcp-tools/cdktf/commit/1ffc6625917eeebbf683bf7475cda2c056458a3c))
+
 ## [1.9.1](https://github.com/gcp-tools/cdktf/compare/v1.9.0...v1.9.1) (2025-06-12)
 
 ### Bug Fixes
