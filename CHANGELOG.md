@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.1](https://github.com/gcp-tools/cdktf/compare/v1.9.0...v1.9.1) (2025-06-12)
+
+### Bug Fixes
+
+* adds verbose logging ([f952af9](https://github.com/gcp-tools/cdktf/commit/f952af93ab5a84d22faa3726def798f9cc0fa35c))
+* adds verbose logging ([db675ba](https://github.com/gcp-tools/cdktf/commit/db675baa645976fb966fb783378649d59823a57c))
+
 ## [1.9.0](https://github.com/gcp-tools/cdktf/compare/v1.8.3...v1.9.0) (2025-06-12)
 
 ### Features
