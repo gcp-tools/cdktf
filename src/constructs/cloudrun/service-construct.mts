@@ -88,6 +88,13 @@ export type CloudRunServiceConstructConfig = {
     containerPort?: number
     containerConcurrency?: number
     timeoutSeconds?: number
+    /**
+     * The number of container images to keep in Artifact Registry.
+     * Older images will be automatically deleted.
+     * Defaults to 20. Set to 0 to disable cleanup.
+     * @default 20
+     */
+    imageRetentionCount?: number
   }
 }
 
@@ -126,6 +133,7 @@ export class CloudRunServiceConstruct<
       containerPort = 8080,
       containerConcurrency = 80,
       timeoutSeconds = 60,
+      imageRetentionCount = 10,
     } = serviceConfig
 
     const serviceId = this.id('service')
@@ -136,6 +144,29 @@ export class CloudRunServiceConstruct<
 
     // Create Artifact Registry repository
     const repositoryId = this.id('repo')
+    const cleanupPolicies =
+      imageRetentionCount > 0
+        ? [
+            {
+              id: 'keep-most-recent',
+              action: 'KEEP',
+              condition: {
+                packageNamePrefixes: [serviceId.toLowerCase()],
+                tagState: 'ANY',
+                newerCountThan: imageRetentionCount,
+              },
+            },
+            {
+              id: 'delete-old-images',
+              action: 'DELETE',
+              condition: {
+                packageNamePrefixes: [serviceId.toLowerCase()],
+                tagState: 'ANY',
+              },
+            },
+          ]
+        : undefined
+
     this.repository = new ArtifactRegistryRepository(this, repositoryId, {
       repositoryId: repositoryId.toLowerCase(),
       format: 'DOCKER',
@@ -143,6 +174,7 @@ export class CloudRunServiceConstruct<
       project: scope.projectId,
       description: `Container repository for ${serviceId}`,
       dependsOn,
+      cleanupPolicies,
     })
 
     // Create storage bucket for source code
