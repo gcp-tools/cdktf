@@ -61,7 +61,7 @@ import { LocalExec } from 'cdktf-local-exec'
 import type { AppStack } from '../../stacks/app-stack.mjs'
 import { BaseAppConstruct } from '../base-app-construct.mjs'
 
-const sourceDirectory = resolve(cwd(), '..', 'services')
+const sourceDirectory = resolve(cwd(), '..', '..', 'services')
 
 export type CloudRunServiceConstructConfig = {
   // Build configuration for local source code
