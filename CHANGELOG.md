@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.10.12](https://github.com/gcp-tools/cdktf/compare/v1.10.11...v1.10.12) (2025-06-13)
+
+### Bug Fixes
+
+* alternate implementation ([ec1fc21](https://github.com/gcp-tools/cdktf/commit/ec1fc21e615af436d35700e560ebd4f9db9e2c11))
+
 ## [1.10.11](https://github.com/gcp-tools/cdktf/compare/v1.10.10...v1.10.11) (2025-06-13)
 
 ### Bug Fixes
