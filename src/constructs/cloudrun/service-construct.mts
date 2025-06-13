@@ -277,7 +277,13 @@ export class CloudRunServiceConstruct<
         this.cloudBuildServiceAccountBinding,
         this.buildConfigFile,
       ],
-      command: `gcloud builds submit --no-source --config="${this.buildConfigFile.filename}" --project=${scope.projectId} --verbosity=debug`,
+      command: `gcloud builds submit --no-source --config="${this.buildConfigFile.filename}" --project=${scope.projectId} --verbosity=debug 2>&1 | tee build.log`,
+    })
+
+    // Add a delay to ensure image propagation
+    const imagePropagationDelay = new LocalExec(this, this.id('image', 'propagation', 'delay'), {
+      dependsOn: [this.buildStep],
+      command: `sleep 30 && gcloud container images describe ${this.imageUri} --format="value(digest)" --project=${scope.projectId}`,
     })
 
     // Grant the deployer SA permission to act as the Cloud Run SA.
@@ -295,7 +301,11 @@ export class CloudRunServiceConstruct<
 
     const serviceDependencies: ITerraformDependable[] = [
       this.buildStep as unknown as ITerraformDependable,
+      imagePropagationDelay as unknown as ITerraformDependable,
       deployerBinding,
+      this.cloudBuildServiceAccountBinding,
+      this.repository,
+      this.archive
     ]
 
     // Create Cloud Run service
@@ -332,10 +342,35 @@ export class CloudRunServiceConstruct<
               name,
               value,
             })),
+            startupProbe: {
+              initialDelaySeconds: 0,
+              timeoutSeconds: 1,
+              periodSeconds: 3,
+              failureThreshold: 1,
+              tcpSocket: {
+                port: containerPort
+              }
+            },
+            livenessProbe: {
+              initialDelaySeconds: 10,
+              timeoutSeconds: 1,
+              periodSeconds: 10,
+              failureThreshold: 3,
+              httpGet: {
+                path: '/health',
+                port: containerPort
+              }
+            }
           },
         ],
         executionEnvironment: 'EXECUTION_ENVIRONMENT_GEN2',
       },
+      traffic: [
+        {
+          percent: 100,
+          type: 'TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST'
+        }
+      ],
       timeouts: {
         create: '20m', // Longer timeout to allow for container build
         update: '10m',
