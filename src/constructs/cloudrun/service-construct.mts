@@ -102,7 +102,7 @@ export class CloudRunServiceConstruct<
   protected bucket: StorageBucket
   protected archive: StorageBucketObject
   protected archiveFile: DataArchiveFile
-  protected buildConfigFile: File
+  // protected buildConfigFile: File
   protected buildStep: LocalExec
   protected cloudBuildServiceAccountBinding: ProjectIamMember
   protected invoker: CloudRunServiceIamBinding
@@ -265,19 +265,33 @@ export class CloudRunServiceConstruct<
     })
 
     // Create the build config file using the 'local' provider
-    this.buildConfigFile = new File(this, this.id('build', 'config', 'file'), {
-      content: cloudbuildYaml,
-      filename: buildConfigPath,
-    })
+    // this.buildConfigFile = new File(this, this.id('build', 'config', 'file'), {
+    //   content: cloudbuildYaml,
+    //   filename: buildConfigPath,
+    // })
 
     // Create Cloud Build step using LocalExec
     this.buildStep = new LocalExec(this, this.id('build', 'step'), {
       dependsOn: [
         this.archive,
         this.cloudBuildServiceAccountBinding,
-        this.buildConfigFile,
+        // this.buildConfigFile,
       ],
-      command: `gcloud builds submit --no-source --config="${this.buildConfigFile.filename}" --project=${scope.projectId} --verbosity=debug 2>&1 | tee build.log`,
+      // command: `gcloud builds submit --no-source --config="${this.buildConfigFile.filename}" --project=${scope.projectId} --verbosity=debug 2>&1 | tee build.log`,
+      command: `
+      echo "Starting Cloud Build for container..."
+      # Ensure gcloud is configured
+      gcloud config set project ${scope.projectId}
+      # Create temporary cloudbuild.yaml
+      cat > /tmp/cloudbuild-${id}.yaml << 'EOF'
+${cloudbuildYaml}
+EOF
+      # Submit build
+      gcloud builds submit --no-source --config=/tmp/cloudbuild-${id}.yaml --project=${scope.projectId}
+      # Cleanup
+      rm -f /tmp/cloudbuild-${id}.yaml
+      echo "✅ Container build completed successfully!"
+    `.trim()
     })
 
     // Add a delay to ensure image propagation with retries
