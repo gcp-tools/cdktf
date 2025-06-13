@@ -220,6 +220,14 @@ export class CloudRunServiceConstruct<
       source: this.archiveFile.outputPath,
     })
 
+    // Grant the deployer SA permission to create Cloud Builds. This is required
+    // for the 'gcloud builds submit' command to succeed.
+    new ProjectIamMember(this, this.id('deployer', 'cloudbuild', 'editor'), {
+      project: scope.projectId,
+      role: 'roles/cloudbuild.editor',
+      member: `serviceAccount:${envConfig.deployerSaEmail}`,
+    })
+
     // Grant Cloud Build service account access to push to Artifact Registry
     this.cloudBuildServiceAccountBinding = new ProjectIamMember(
       this,
