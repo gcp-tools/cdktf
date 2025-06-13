@@ -228,6 +228,13 @@ export class CloudRunServiceConstruct<
       member: `serviceAccount:${envConfig.deployerSaEmail}`,
     })
 
+    // Grant the deployer SA permission to write logs.
+    new ProjectIamMember(this, this.id('deployer', 'logging', 'writer'), {
+      project: scope.projectId,
+      role: 'roles/logging.logWriter',
+      member: `serviceAccount:${envConfig.deployerSaEmail}`,
+    })
+
     // Grant Cloud Build service account access to push to Artifact Registry
     this.cloudBuildServiceAccountBinding = new ProjectIamMember(
       this,
@@ -280,35 +287,39 @@ export class CloudRunServiceConstruct<
 
     // Create Cloud Build step using LocalExec
     this.buildStep = new LocalExec(this, this.id('build', 'step'), {
-      dependsOn: [
-        this.archive,
-        this.cloudBuildServiceAccountBinding,
-      ],
+      dependsOn: [this.archive, this.cloudBuildServiceAccountBinding],
       command: `
-        # Create temporary cloudbuild.yaml
+        set -e -o pipefail
+
         CLOUDBUILD_CONFIG="/tmp/cloudbuild-${this.constructId}.yaml"
-        echo "Creating build config at $CLOUDBUILD_CONFIG"
-        cat > "$CLOUDBUILD_CONFIG" << 'EOF'
+        LOG_NAME="cdktf-build-logs"
+        trap 'rm -f "$CLOUDBUILD_CONFIG"' EXIT # Ensure cleanup
+
+        # Create the Cloud Build config file
+        cat > "$CLOUDBUILD_CONFIG" <<EOF
 ${cloudbuildYaml}
 EOF
-        echo "Build config file exists: $(test -f "$CLOUDBUILD_CONFIG" && echo 'yes' || echo 'no')"
-        echo "Build config file contents:"
-        cat "$CLOUDBUILD_CONFIG"
-        echo "Starting build..."
-        gcloud builds submit --no-source \
-          --config="$CLOUDBUILD_CONFIG" \
-          --project=${scope.projectId} \
-          --verbosity=debug \
-          --format="json" \
-          2>&1 | tee /tmp/${this.constructId}-build.log
+
+        echo "Submitting Cloud Build job. See Cloud Logging for details."
+        # Execute build and capture all output
+        BUILD_OUTPUT=$(gcloud builds submit --no-source --config="$CLOUDBUILD_CONFIG" --project=${scope.projectId} --verbosity=info 2>&1)
         BUILD_EXIT_CODE=$?
-        echo "Build exit code: $BUILD_EXIT_CODE"
+
+        # Structure the log entry as JSON
+        JSON_PAYLOAD=$(jq -n \\
+          --arg output "$BUILD_OUTPUT" \\
+          --arg exit_code "$BUILD_EXIT_CODE" \\
+          --arg service_id "${serviceId}" \\
+          '{ "message": "Cloud Build execution finished.", "stdout_stderr": $output, "exit_code": $exit_code, "service_id": $service_id }')
+
+        # Send the log to Google Cloud Logging
+        echo "$JSON_PAYLOAD" | gcloud logging write "$LOG_NAME" --payload-type=json --project=${scope.projectId}
+
+        # If build failed, exit with the same error code to fail the deployment
         if [ $BUILD_EXIT_CODE -ne 0 ]; then
-          echo "Build failed. Check /tmp/${this.constructId}-build.log for details"
+          echo "Build failed with exit code $BUILD_EXIT_CODE. See '$LOG_NAME' in Cloud Logging."
           exit $BUILD_EXIT_CODE
         fi
-        # Cleanup
-        rm -f "$CLOUDBUILD_CONFIG"
       `,
     })
 
@@ -514,5 +525,6 @@ steps:
 options:
   machineType: {{MACHINE_TYPE}}
   logging: CLOUD_LOGGING_ONLY
+  substitution_option: ALLOW_LOOSE
 timeout: {{TIMEOUT}}
 `
