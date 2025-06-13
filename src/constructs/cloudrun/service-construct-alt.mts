@@ -226,8 +226,10 @@ options:
         this.iamBindingForDeployerBuilds,
       ],
       command: `
-        # Strict mode and command tracing
-        set -euxo pipefail
+        # Exit immediately if a command exits with a non-zero status.
+        set -e
+        # Trace commands before they are executed.
+        set -x
 
         echo "--- DIAGNOSTICS ---"
         echo "Executing as user: $(whoami)"
