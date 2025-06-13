@@ -108,6 +108,7 @@ export class CloudRunServiceConstruct<
   protected invoker: CloudRunServiceIamBinding
   public service: CloudRunV2Service
   public imageUri: string
+  protected iamBindingForDeployerBuilds: ProjectIamMember
 
   constructor(scope: AppStack, id: string, config: T) {
     super(scope, id, config)
@@ -222,11 +223,15 @@ export class CloudRunServiceConstruct<
 
     // Grant the deployer SA permission to create Cloud Builds. This is required
     // for the 'gcloud builds submit' command to succeed.
-    new ProjectIamMember(this, this.id('deployer', 'cloudbuild', 'editor'), {
-      project: scope.projectId,
-      role: 'roles/cloudbuild.builds.builder',
-      member: `serviceAccount:${envConfig.deployerSaEmail}`,
-    })
+    this.iamBindingForDeployerBuilds = new ProjectIamMember(
+      this,
+      this.id('deployer', 'cloudbuild', 'editor'),
+      {
+        project: scope.projectId,
+        role: 'roles/cloudbuild.builds.builder',
+        member: `serviceAccount:${envConfig.deployerSaEmail}`,
+      },
+    )
 
     // Grant the deployer SA permission to write logs.
     new ProjectIamMember(this, this.id('deployer', 'logging', 'writer'), {
@@ -285,41 +290,55 @@ export class CloudRunServiceConstruct<
     //   filename: buildConfigPath,
     // })
 
-    // Create Cloud Build step using LocalExec
+    // Create Cloud Build step using LocalExec. This implementation is designed
+    // for simplicity and robust error reporting in a CI/CD environment.
     this.buildStep = new LocalExec(this, this.id('build', 'step'), {
-      dependsOn: [this.archive, this.cloudBuildServiceAccountBinding],
+      dependsOn: [
+        this.archive,
+        this.cloudBuildServiceAccountBinding,
+        // Also depend on the deployer having the permission to create builds.
+        this.iamBindingForDeployerBuilds,
+      ],
       command: `
-        set -e -o pipefail
+        # This script is designed to be robust and transparent.
+        # -e: exits immediately if a command exits with a non-zero status.
+        # -u: treats unset variables as an error.
+        # -o pipefail: the return value of a pipeline is the status of
+        #   the last command to exit with a non-zero status.
+        set -euo pipefail
 
-        CLOUDBUILD_CONFIG="/tmp/cloudbuild-${this.constructId}.yaml"
-        LOG_NAME="cdktf-build-logs"
-        trap 'rm -f "$CLOUDBUILD_CONFIG"' EXIT # Ensure cleanup
+        # A temporary file is used for the build configuration.
+        # 'mktemp' creates a secure temporary file.
+        CLOUDBUILD_CONFIG=$(mktemp)
 
-        # Create the Cloud Build config file
+        # 'trap' ensures that the temporary file is deleted when the script exits,
+        # whether it succeeds or fails.
+        trap 'rm -f "$CLOUDBUILD_CONFIG"' EXIT
+
+        echo "---"
+        echo "Creating Cloud Build configuration at: $CLOUDBUILD_CONFIG"
+
+        # A HERE document is used to safely write the multi-line
+        # build configuration to the temporary file.
         cat > "$CLOUDBUILD_CONFIG" <<EOF
 ${cloudbuildYaml}
 EOF
 
-        echo "Submitting Cloud Build job. See Cloud Logging for details."
-        # Execute build and capture all output
-        BUILD_OUTPUT=$(gcloud builds submit --no-source --config="$CLOUDBUILD_CONFIG" --project=${scope.projectId} --verbosity=info 2>&1)
-        BUILD_EXIT_CODE=$?
+        echo "Submitting build to Google Cloud..."
+        echo "---"
 
-        # Structure the log entry as JSON
-        JSON_PAYLOAD=$(jq -n \\
-          --arg output "$BUILD_OUTPUT" \\
-          --arg exit_code "$BUILD_EXIT_CODE" \\
-          --arg service_id "${serviceId}" \\
-          '{ "message": "Cloud Build execution finished.", "stdout_stderr": $output, "exit_code": $exit_code, "service_id": $service_id }')
+        # The 'gcloud builds submit' command is executed. If it fails,
+        # 'set -e' will cause the script to exit immediately, and LocalExec
+        # will report the failure, including the command's stdout and stderr.
+        gcloud builds submit \\
+          --no-source \\
+          --project=${scope.projectId} \\
+          --config="$CLOUDBUILD_CONFIG" \\
+          --verbosity=info
 
-        # Send the log to Google Cloud Logging
-        echo "$JSON_PAYLOAD" | gcloud logging write "$LOG_NAME" --payload-type=json --project=${scope.projectId}
-
-        # If build failed, exit with the same error code to fail the deployment
-        if [ $BUILD_EXIT_CODE -ne 0 ]; then
-          echo "Build failed with exit code $BUILD_EXIT_CODE. See '$LOG_NAME' in Cloud Logging."
-          exit $BUILD_EXIT_CODE
-        fi
+        echo "---"
+        echo "Build submitted successfully."
+        echo "---"
       `,
     })
 
@@ -484,43 +503,31 @@ EOF
 const cloudbuildTemplate = `
 steps:
   # Download and extract source
-  - name: gcr.io/cloud-builders/gsutil
-    args:
-      - cp
-      - gs://{{BUCKET_NAME}}/{{ARCHIVE_NAME}}
-      - /workspace/source.zip
+  - name: 'gcr.io/cloud-builders/gsutil'
+    args: ['cp', 'gs://{{BUCKET_NAME}}/{{ARCHIVE_NAME}}', '/workspace/source.zip']
 
-  # Install unzip and extract the archive
-  - name: ubuntu
-    entrypoint: bash
-    args:
-      - -c
-      - |
-        apt-get update && apt-get install -y unzip
-        unzip /workspace/source.zip -d /workspace/src
+  - name: 'ubuntu'
+    args: ['unzip', '/workspace/source.zip', '-d', '/workspace/src']
 
   # Build Docker image
-  - name: gcr.io/cloud-builders/docker
+  - name: 'gcr.io/cloud-builders/docker'
     args:
-      - build
-      - -t
-      - {{IMAGE_URI}}
-      - -t
-      - {{IMAGE_URI_WITH_BUILD_ID}}
-      - -f
-      - /workspace/src/{{DOCKERFILE}}{{BUILD_ARGS}}
-      - /workspace/src
+      - 'build'
+      - '-t'
+      - '{{IMAGE_URI}}'
+      - '-t'
+      - '{{IMAGE_URI_WITH_BUILD_ID}}'
+      - '-f'
+      - '/workspace/src/{{DOCKERFILE}}'
+{{BUILD_ARGS}}
+      - '/workspace/src'
 
   # Push images
-  - name: gcr.io/cloud-builders/docker
-    args:
-      - push
-      - {{IMAGE_URI}}
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '{{IMAGE_URI}}']
 
-  - name: gcr.io/cloud-builders/docker
-    args:
-      - push
-      - {{IMAGE_URI_WITH_BUILD_ID}}
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '{{IMAGE_URI_WITH_BUILD_ID}}']
 
 options:
   machineType: {{MACHINE_TYPE}}
