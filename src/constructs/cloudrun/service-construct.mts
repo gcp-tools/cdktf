@@ -303,6 +303,7 @@ export class CloudRunServiceConstruct<
       name: serviceId,
       location: region,
       project: scope.projectId,
+      deletionProtection: false,
       template: {
         scaling: {
           minInstanceCount: minScale,
