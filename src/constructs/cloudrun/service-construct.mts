@@ -275,23 +275,33 @@ export class CloudRunServiceConstruct<
       dependsOn: [
         this.archive,
         this.cloudBuildServiceAccountBinding,
-        // this.buildConfigFile,
       ],
-      // command: `gcloud builds submit --no-source --config="${this.buildConfigFile.filename}" --project=${scope.projectId} --verbosity=debug 2>&1 | tee build.log`,
       command: `
-      echo "Starting Cloud Build for container..."
-      # Ensure gcloud is configured
-      gcloud config set project ${scope.projectId}
-      # Create temporary cloudbuild.yaml
-      cat > /tmp/cloudbuild-${id}.yaml << 'EOF'
+        # Create temporary cloudbuild.yaml
+        CLOUDBUILD_CONFIG="/tmp/cloudbuild-${this.constructId}.yaml"
+        echo "Creating build config at $CLOUDBUILD_CONFIG"
+        cat > "$CLOUDBUILD_CONFIG" << 'EOF'
 ${cloudbuildYaml}
 EOF
-      # Submit build
-      gcloud builds submit --no-source --config=/tmp/cloudbuild-${id}.yaml --project=${scope.projectId}
-      # Cleanup
-      rm -f /tmp/cloudbuild-${id}.yaml
-      echo "✅ Container build completed successfully!"
-    `.trim()
+        echo "Build config file exists: $(test -f "$CLOUDBUILD_CONFIG" && echo 'yes' || echo 'no')"
+        echo "Build config file contents:"
+        cat "$CLOUDBUILD_CONFIG"
+        echo "Starting build..."
+        gcloud builds submit --no-source \
+          --config="$CLOUDBUILD_CONFIG" \
+          --project=${scope.projectId} \
+          --verbosity=debug \
+          --format="json" \
+          2>&1 | tee /tmp/${this.constructId}-build.log
+        BUILD_EXIT_CODE=$?
+        echo "Build exit code: $BUILD_EXIT_CODE"
+        if [ $BUILD_EXIT_CODE -ne 0 ]; then
+          echo "Build failed. Check /tmp/${this.constructId}-build.log for details"
+          exit $BUILD_EXIT_CODE
+        fi
+        # Cleanup
+        rm -f "$CLOUDBUILD_CONFIG"
+      `,
     })
 
     // Add a delay to ensure image propagation with retries
