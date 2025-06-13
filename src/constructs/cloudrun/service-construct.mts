@@ -224,7 +224,7 @@ export class CloudRunServiceConstruct<
     // for the 'gcloud builds submit' command to succeed.
     new ProjectIamMember(this, this.id('deployer', 'cloudbuild', 'editor'), {
       project: scope.projectId,
-      role: 'roles/cloudbuild.editor',
+      role: 'roles/cloudbuild.builds.builder',
       member: `serviceAccount:${envConfig.deployerSaEmail}`,
     })
 
