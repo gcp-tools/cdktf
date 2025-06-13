@@ -455,34 +455,46 @@ EOF
 const cloudbuildTemplate = `
 steps:
   # Download and extract source
-  - name: 'gcr.io/cloud-builders/gsutil'
-    args: ['cp', 'gs://{{BUCKET_NAME}}/{{ARCHIVE_NAME}}', '/workspace/source.zip']
+  - name: gcr.io/cloud-builders/gsutil
+    args:
+      - cp
+      - gs://{{BUCKET_NAME}}/{{ARCHIVE_NAME}}
+      - /workspace/source.zip
 
-  - name: 'ubuntu'
-    args: ['unzip', '/workspace/source.zip', '-d', '/workspace/src']
+  # Install unzip and extract the archive
+  - name: ubuntu
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        apt-get update && apt-get install -y unzip
+        unzip /workspace/source.zip -d /workspace/src
 
   # Build Docker image
-  - name: 'gcr.io/cloud-builders/docker'
+  - name: gcr.io/cloud-builders/docker
     args:
-      - 'build'
-      - '-t'
-      - '{{IMAGE_URI}}'
-      - '-t'
-      - '{{IMAGE_URI_WITH_BUILD_ID}}'
-      - '-f'
-      - '/workspace/src/{{DOCKERFILE}}'
-{{BUILD_ARGS}}
-      - '/workspace/src'
+      - build
+      - -t
+      - {{IMAGE_URI}}
+      - -t
+      - {{IMAGE_URI_WITH_BUILD_ID}}
+      - -f
+      - /workspace/src/{{DOCKERFILE}}{{BUILD_ARGS}}
+      - /workspace/src
 
   # Push images
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', '{{IMAGE_URI}}']
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - {{IMAGE_URI}}
 
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', '{{IMAGE_URI_WITH_BUILD_ID}}']
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - {{IMAGE_URI_WITH_BUILD_ID}}
 
 options:
-  machineType: '{{MACHINE_TYPE}}'
+  machineType: {{MACHINE_TYPE}}
   logging: CLOUD_LOGGING_ONLY
-timeout: '{{TIMEOUT}}'
+timeout: {{TIMEOUT}}
 `
