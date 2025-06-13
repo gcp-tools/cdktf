@@ -280,10 +280,22 @@ export class CloudRunServiceConstruct<
       command: `gcloud builds submit --no-source --config="${this.buildConfigFile.filename}" --project=${scope.projectId} --verbosity=debug 2>&1 | tee build.log`,
     })
 
-    // Add a delay to ensure image propagation
+    // Add a delay to ensure image propagation with retries
     const imagePropagationDelay = new LocalExec(this, this.id('image', 'propagation', 'delay'), {
       dependsOn: [this.buildStep],
-      command: `sleep 30 && gcloud container images describe ${this.imageUri} --format="value(digest)" --project=${scope.projectId}`,
+      command: `
+        for i in {1..5}; do
+          echo "Attempt $i: Checking if image exists..."
+          if gcloud container images describe ${this.imageUri} --format="value(digest)" --project=${scope.projectId} 2>/dev/null; then
+            echo "Image found!"
+            exit 0
+          fi
+          echo "Image not found, waiting 30 seconds..."
+          sleep 30
+        done
+        echo "Failed to find image after 5 attempts"
+        exit 1
+      `,
     })
 
     // Grant the deployer SA permission to act as the Cloud Run SA.
