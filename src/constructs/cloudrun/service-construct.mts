@@ -57,7 +57,7 @@ import { ServiceAccountIamBinding } from '@cdktf/provider-google/lib/service-acc
 import { StorageBucketIamBinding } from '@cdktf/provider-google/lib/storage-bucket-iam-binding/index.js'
 import { StorageBucketObject } from '@cdktf/provider-google/lib/storage-bucket-object/index.js'
 import { StorageBucket } from '@cdktf/provider-google/lib/storage-bucket/index.js'
-import { File } from '@cdktf/provider-local/lib/file/index.js'
+// import { File } from '@cdktf/provider-local/lib/file/index.js'
 import type { ITerraformDependable } from 'cdktf'
 import { LocalExec } from 'cdktf-local-exec'
 import type { AppStack } from '../../stacks/app-stack.mjs'
@@ -248,13 +248,13 @@ export class CloudRunServiceConstruct<
 
     this.imageUri = `${region}-docker.pkg.dev/${scope.projectId}/${this.repository.name}/${serviceId}:latest`
 
-    // Define path for the build config file
-    const buildConfigPath = resolve(
-      '.',
-      'cdktf.out',
-      'build-configs',
-      `${this.constructId}.yaml`,
-    )
+    // // Define path for the build config file
+    // const buildConfigPath = resolve(
+    //   '.',
+    //   'cdktf.out',
+    //   'build-configs',
+    //   `${this.constructId}.yaml`,
+    // )
 
     // Generate the content for the cloudbuild.yaml file
     const cloudbuildYaml = this.generateBuildYaml({
