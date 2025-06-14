@@ -252,6 +252,8 @@ EOF
 
         gcloud config set project ${scope.projectId}
 
+        echo "CLOUDSDK_CORE_PROJECT prefix: $CLOUDSDK_CORE_PROJECT:0:6"
+
         echo "Submitting build..."
         gcloud builds submit --no-source --config="$CLOUDBUILD_CONFIG" --project=${scope.projectId}
       `,
