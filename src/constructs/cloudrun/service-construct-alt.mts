@@ -44,6 +44,7 @@ export type CloudRunServiceConstructConfig = {
     containerPort?: number
     containerConcurrency?: number
     timeoutSeconds?: number
+    imageRetentionCount?: number
   }
 }
 
@@ -73,6 +74,7 @@ export class CloudRunServiceConstructAlt<
       containerPort = 8080,
       containerConcurrency = 80,
       timeoutSeconds = 60,
+      imageRetentionCount = 10,
     } = serviceConfig
 
     const serviceId = this.id('service')
@@ -87,11 +89,34 @@ export class CloudRunServiceConstructAlt<
     })
 
     // --- Artifact Registry Repository ---
+    const cleanupPolicies =
+    imageRetentionCount > 0
+      ? [
+          {
+            id: 'keep-most-recent',
+            action: 'KEEP',
+            condition: {
+              packageNamePrefixes: [serviceId.toLowerCase()],
+              tagState: 'ANY',
+              newerCountThan: imageRetentionCount,
+            },
+          },
+          {
+            id: 'delete-old-images',
+            action: 'DELETE',
+            condition: {
+              packageNamePrefixes: [serviceId.toLowerCase()],
+              tagState: 'ANY',
+            },
+          },
+        ]
+      : undefined
     const repository = new ArtifactRegistryRepository(this, this.id('repo'), {
       repositoryId: this.id('repo').toLowerCase(),
       format: 'DOCKER',
       location: region,
       project: scope.projectId,
+      cleanupPolicies,
     })
 
     // --- Source Code Storage ---
