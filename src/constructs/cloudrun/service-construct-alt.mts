@@ -149,7 +149,7 @@ export class CloudRunServiceConstructAlt<
       {
         project: scope.projectId,
         role: 'roles/serviceusage.serviceUsageConsumer',
-        member: `serviceAccount:${envConfig.deployerSaEmail}`,
+        member: `serviceAccount:${scope.stackServiceAccount.email}`,
       },
     )
     const cloudBuildServiceAccountBinding = new ProjectIamMember(
