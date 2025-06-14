@@ -238,6 +238,11 @@ options:
 
         echo "--- DIAGNOSTICS ---"
         echo "Executing as user: $(whoami)"
+        echo "Current Project ID: $(gcloud config get-value project)"
+        echo "Attempting to run in project: ${scope.projectId}"
+        echo "Project Number: ${scope.projectNumber}"
+        echo "--- API Status ---"
+        gcloud services list --enabled --filter="name:cloudbuild.googleapis.com" --project=${scope.projectId}
         echo "--- gcloud auth list ---"
         gcloud auth list
         echo "--- gcloud config list ---"
