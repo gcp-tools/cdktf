@@ -87,7 +87,7 @@ export class CloudRunServiceConstructAlt<
 
     const serviceId = this.id('service')
     const sourceDir = resolve(sourceDirectory, scope.stackId)
-    // const dockerfile = 'Dockerfile'
+    const dockerfile = 'Dockerfile'
 
     // --- Artifact Registry Repository ---
 
@@ -190,7 +190,7 @@ export class CloudRunServiceConstructAlt<
     const buildArgsLines = Object.entries(buildArgs)
       .map(([key, value]) => `      - '--build-arg=${key}=${value}'`)
       .join('\n')
-    const imageUriWithBuildId = this.imageUri.replace(':latest', ':$BUILD_ID')
+    const imageUriWithBuildId = this.imageUri.replace(':latest', ':\\$BUILD_ID')
     const cloudbuildYaml = `
 steps:
   - name: 'gcr.io/cloud-builders/gsutil'
@@ -205,16 +205,16 @@ steps:
       - '-t'
       - '${imageUriWithBuildId}'
       - '-f'
-      - '/workspace/src/DOCKERFILE'
+      - '/workspace/src/${dockerfile}'
 ${buildArgsLines}
       - '/workspace/src'
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', '${this.imageUri}']
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', '${imageUriWithBuildId}']
+timeout: ${buildTimeout}
 options:
   machineType: ${machineType}
-  timeout: ${buildTimeout}
   logging: CLOUD_LOGGING_ONLY
 `
 
