@@ -151,12 +151,12 @@ export class CloudRunServiceConstructAlt<
         member: `serviceAccount:${envConfig.deployerSaEmail}`,
       },
     )
-    const consumerBinding = new ProjectIamMember(
+    const serviceUsageAdminBinding = new ProjectIamMember(
       this,
-      this.id('consumer-sa-user'),
+      this.id('service-usage-admin'),
       {
         project: scope.projectId,
-        role: 'roles/serviceusage.serviceUsageConsumer',
+        role: 'roles/serviceusage.serviceUsageAdmin',
         member: `serviceAccount:${envConfig.deployerSaEmail}`,
       },
     )
@@ -227,7 +227,7 @@ options:
         archive,
         cloudBuildServiceAccountBinding,
         iamBindingForDeployerBuilds,
-        consumerBinding,
+        serviceUsageAdminBinding,
         cloudBuildApi,
       ],
       command: `
