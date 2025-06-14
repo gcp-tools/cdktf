@@ -6,8 +6,9 @@
  * It declaratively enables required APIs and includes a resilient build
  * script that handles the "eventual consistency" of cloud provider APIs.
  */
-import { resolve } from 'node:path'
+import { resolve, dirname } from 'node:path'
 import { cwd } from 'node:process'
+import { fileURLToPath } from 'node:url'
 import { DataArchiveFile } from '@cdktf/provider-archive/lib/data-archive-file/index.js'
 import { ArtifactRegistryRepository } from '@cdktf/provider-google/lib/artifact-registry-repository/index.js'
 import { CloudRunServiceIamBinding } from '@cdktf/provider-google/lib/cloud-run-service-iam-binding/index.js'
@@ -24,6 +25,7 @@ import { envConfig } from '../../utils/env.mjs'
 import { BaseAppConstruct } from '../base-app-construct.mjs'
 
 const sourceDirectory = resolve(cwd(), '..', '..', 'services')
+const __dirname = dirname(fileURLToPath(import.meta.url))
 
 export type CloudRunServiceConstructConfig = {
   buildConfig: {
@@ -149,7 +151,7 @@ export class CloudRunServiceConstructAlt<
       {
         project: scope.projectId,
         role: 'roles/serviceusage.serviceUsageConsumer',
-        member: `serviceAccount:${scope.stackServiceAccount.email}`,
+        member: `serviceAccount:${envConfig.deployerSaEmail}`,
       },
     )
     const cloudBuildServiceAccountBinding = new ProjectIamMember(
@@ -250,10 +252,22 @@ EOF
         cat "$CLOUDBUILD_CONFIG"
         echo "--- End Build Config ---"
 
-        export CLOUDSDK_CORE_PROJECT=${scope.projectId}
-
-        echo "Submitting build..."
-        gcloud builds submit --no-source --config="$CLOUDBUILD_CONFIG" --project=${scope.projectId}
+        # IAM permissions can take a moment to propagate.
+        # Retry the build submission on failure to handle eventual consistency.
+        for i in {1..3}; do
+          echo "Submitting build (attempt $i)..."
+          if gcloud builds submit --no-source --config="$CLOUDBUILD_CONFIG" --project=${scope.projectId}; then
+            echo "Build submitted successfully."
+            break
+          fi
+          if [[ $i -lt 3 ]]; then
+            echo "Build submission failed. Waiting 15 seconds before retry..."
+            sleep 15
+          else
+            echo "Build submission failed after 3 attempts."
+            exit 1
+          fi
+        done
       `,
     })
 
