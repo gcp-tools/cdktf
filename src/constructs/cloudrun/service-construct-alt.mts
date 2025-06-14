@@ -181,6 +181,16 @@ export class CloudRunServiceConstructAlt<
         members: [`serviceAccount:${envConfig.deployerSaEmail}`],
       },
     )
+    const consumerBinding = new ServiceAccountIamBinding(
+      this,
+      this.id('consumer-sa-user'),
+      {
+        serviceAccountId: scope.stackServiceAccount.id,
+        role: 'roles/iam.serviceUsageConsumer',
+        members: [`serviceAccount:${envConfig.deployerSaEmail}`],
+      },
+    )
+
 
     // --- Image URI & Build YAML ---
     this.imageUri = `${region}-docker.pkg.dev/${scope.projectId}/${repository.name}/${serviceId}:latest`
@@ -222,6 +232,7 @@ options:
         cloudBuildServiceAccountBinding,
         iamBindingForDeployerBuilds,
         cloudBuildApi,
+        consumerBinding,
       ],
       command: `
         # Exit immediately if a command exits with a non-zero status.
