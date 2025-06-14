@@ -252,19 +252,21 @@ EOF
 
         # IAM permissions can take a moment to propagate.
         # Retry the build submission on failure to handle eventual consistency.
-        for i in {1..3}; do
+        i=1
+        while [ $i -le 3 ]; do
           echo "Submitting build (attempt $i)..."
           if gcloud builds submit --no-source --config="$CLOUDBUILD_CONFIG" --project=${scope.projectId}; then
             echo "Build submitted successfully."
             break
           fi
-          if [[ $i -lt 3 ]]; then
+          if [ $i -lt 3 ]; then
             echo "Build submission failed. Waiting 15 seconds before retry..."
             sleep 15
           else
             echo "Build submission failed after 3 attempts."
             exit 1
           fi
+          i=$((i + 1))
         done
       `,
     })
