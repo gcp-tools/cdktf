@@ -219,7 +219,6 @@ options:
         archive,
         cloudBuildServiceAccountBinding,
         iamBindingForDeployerBuilds,
-        cloudBuildApi,
         consumerBinding,
       ],
       command: `
