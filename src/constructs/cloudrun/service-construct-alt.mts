@@ -22,6 +22,7 @@ import { LocalExec } from 'cdktf-local-exec'
 import type { AppStack } from '../../stacks/app-stack.mjs'
 import { envConfig } from '../../utils/env.mjs'
 import { BaseAppConstruct } from '../base-app-construct.mjs'
+import { ProjectService } from '@cdktf/provider-google/lib/project-service/index.js'
 
 const sourceDirectory = resolve(cwd(), '..', '..', 'services')
 
@@ -79,6 +80,13 @@ export class CloudRunServiceConstructAlt<
     const serviceId = this.id('service')
     const sourceDir = resolve(sourceDirectory, scope.stackId)
     const dockerfile = 'Dockerfile'
+
+    // --- API Enablement ---
+    const cloudBuildApi = new ProjectService(this, this.id('cloudbuild-api'), {
+      project: scope.projectId,
+      service: 'cloudbuild.googleapis.com',
+      disableOnDestroy: false, // Keep API enabled
+    })
 
     // --- Artifact Registry Repository ---
     const cleanupPolicies =
@@ -220,6 +228,7 @@ options:
         cloudBuildServiceAccountBinding,
         iamBindingForDeployerBuilds,
         consumerBinding,
+        cloudBuildApi,
       ],
       command: `
         # Exit immediately if a command exits with a non-zero status.
