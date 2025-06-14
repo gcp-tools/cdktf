@@ -13,7 +13,6 @@ import { ArtifactRegistryRepository } from '@cdktf/provider-google/lib/artifact-
 import { CloudRunServiceIamBinding } from '@cdktf/provider-google/lib/cloud-run-service-iam-binding/index.js'
 import { CloudRunV2Service } from '@cdktf/provider-google/lib/cloud-run-v2-service/index.js'
 import { ProjectIamMember } from '@cdktf/provider-google/lib/project-iam-member/index.js'
-import { ProjectService } from '@cdktf/provider-google/lib/project-service/index.js'
 import { ServiceAccountIamBinding } from '@cdktf/provider-google/lib/service-account-iam-binding/index.js'
 import { StorageBucketIamBinding } from '@cdktf/provider-google/lib/storage-bucket-iam-binding/index.js'
 import { StorageBucketObject } from '@cdktf/provider-google/lib/storage-bucket-object/index.js'
@@ -80,13 +79,6 @@ export class CloudRunServiceConstructAlt<
     const serviceId = this.id('service')
     const sourceDir = resolve(sourceDirectory, scope.stackId)
     const dockerfile = 'Dockerfile'
-
-    // --- API Enablement ---
-    const cloudBuildApi = new ProjectService(this, this.id('cloudbuild-api'), {
-      project: scope.projectId,
-      service: 'cloudbuild.googleapis.com',
-      disableOnDestroy: false, // Keep API enabled
-    })
 
     // --- Artifact Registry Repository ---
     const cleanupPolicies =
@@ -156,7 +148,7 @@ export class CloudRunServiceConstructAlt<
       this.id('consumer-sa-user'),
       {
         project: scope.projectId,
-        role: 'roles/iam.serviceUsageConsumer',
+        role: 'roles/serviceusage.serviceUsageConsumer',
         member: `serviceAccount:${envConfig.deployerSaEmail}`,
       },
     )
