@@ -104,10 +104,6 @@ export class CloudRunServiceConstructAlt<
           {
             id: 'delete-old-images',
             action: 'DELETE',
-            condition: {
-              packageNamePrefixes: [serviceId.toLowerCase()],
-              tagState: 'ANY',
-            },
           },
         ]
       : undefined
