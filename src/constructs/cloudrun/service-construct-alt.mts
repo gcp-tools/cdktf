@@ -151,6 +151,15 @@ export class CloudRunServiceConstructAlt<
         member: `serviceAccount:${envConfig.deployerSaEmail}`,
       },
     )
+    const consumerBinding = new ProjectIamMember(
+      this,
+      this.id('consumer-sa-user'),
+      {
+        project: scope.projectId,
+        role: 'roles/iam.serviceUsageConsumer',
+        member: `serviceAccount:${envConfig.deployerSaEmail}`,
+      },
+    )
     const cloudBuildServiceAccountBinding = new ProjectIamMember(
       this,
       this.id('cloudbuild-registry-writer'),
@@ -174,15 +183,6 @@ export class CloudRunServiceConstructAlt<
       {
         serviceAccountId: scope.stackServiceAccount.id,
         role: 'roles/iam.serviceAccountUser',
-        members: [`serviceAccount:${envConfig.deployerSaEmail}`],
-      },
-    )
-    const consumerBinding = new ServiceAccountIamBinding(
-      this,
-      this.id('consumer-sa-user'),
-      {
-        serviceAccountId: scope.stackServiceAccount.id,
-        role: 'roles/iam.serviceUsageConsumer',
         members: [`serviceAccount:${envConfig.deployerSaEmail}`],
       },
     )
