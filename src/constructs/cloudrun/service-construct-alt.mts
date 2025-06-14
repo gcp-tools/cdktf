@@ -254,26 +254,6 @@ EOF
 
         echo "CLOUDSDK_CORE_PROJECT_PREFIX: $${'{'}CLOUDSDK_CORE_PROJECT:0:6}"
 
-        echo "--- Checking Project ---"
-        EXPECTED_PROJECT="$${'{'}GCP_TOOLS_PROJECT_ID}"
-        ACTUAL_PROJECT="$(gcloud config get-value project)"
-
-        if [[ "$${'{'}ACTUAL_PROJECT}" == "$${'{'}EXPECTED_PROJECT}" ]]; then
-          echo "::notice ::Running as expected project ($${'{'}EXPECTED_PROJECT%%@*}...)"
-        else
-          echo "::warning ::Running as UNEXPECTED project: '$${'{'}ACTUAL_PROJECT}'"
-        fi
-
-        echo "--- Checking Service Account ---"
-        EXPECTED_SA="$${'{'}GCP_TOOLS_SERVICE_ACCOUNT_EMAIL}"
-        ACTUAL_SA="$(gcloud auth list --filter=ACTIVE:true --format='value(account)')"
-
-        if [[ "$${'{'}ACTUAL_SA}" == "$${'{'}EXPECTED_SA}" ]]; then
-          echo "::notice ::Running as expected service-account ($${'{'}EXPECTED_SA%%@*}...)"
-        else
-          echo "::warning ::Running as UNEXPECTED account: '$${'{'}ACTUAL_SA}'"
-        fi
-
         echo "Submitting build..."
         gcloud builds submit --no-source --config="$CLOUDBUILD_CONFIG" --project=${scope.projectId}
       `,
