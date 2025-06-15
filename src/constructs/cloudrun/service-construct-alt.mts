@@ -88,6 +88,27 @@ export class CloudRunServiceConstructAlt<
       disableOnDestroy: false, // Keep API enabled
     })
 
+    // Grant Cloud Build permissions to the deployer service account
+    const cloudBuildViewerBinding = new ProjectIamMember(
+      this,
+      this.id('deployer-cloudbuild-viewer'),
+      {
+        project: scope.projectId,
+        role: 'roles/cloudbuild.builds.viewer',
+        member: `serviceAccount:${envConfig.deployerSaEmail}`,
+      },
+    )
+
+    const cloudBuildBuilderBinding = new ProjectIamMember(
+      this,
+      this.id('deployer-cloudbuild-builder'),
+      {
+        project: scope.projectId,
+        role: 'roles/cloudbuild.builds.builder',
+        member: `serviceAccount:${envConfig.deployerSaEmail}`,
+      },
+    )
+
     // --- Artifact Registry Repository ---
     const cleanupPolicies =
     imageRetentionCount > 0
@@ -229,7 +250,8 @@ options:
         cloudBuildServiceAccountBinding,
         iamBindingForDeployerBuilds,
         serviceUsageAdminBinding,
-        cloudBuildApi,
+        cloudBuildViewerBinding,
+        cloudBuildBuilderBinding,
       ],
       command: `
         # Exit immediately if a command exits with a non-zero status.
