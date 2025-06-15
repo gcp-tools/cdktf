@@ -81,12 +81,6 @@ export class CloudRunServiceConstructAlt<
     const sourceDir = resolve(sourceDirectory, scope.stackId)
     const dockerfile = 'Dockerfile'
 
-    // --- API Enablement ---
-    const cloudBuildApi = new ProjectService(this, this.id('cloudbuild-api'), {
-      project: scope.projectId,
-      service: 'cloudbuild.googleapis.com',
-      disableOnDestroy: false, // Keep API enabled
-    })
 
     // Grant Cloud Build permissions to the deployer service account
     const cloudBuildViewerBinding = new ProjectIamMember(
