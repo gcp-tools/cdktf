@@ -251,19 +251,31 @@ options:
 
         if [ "$CRED_TYPE" = "external_account" ]; then
           echo "Using Workload Identity Federation credentials"
-          # WIF credentials are handled automatically by gcloud
-          # Just need to ensure we're targeting the right project
+
+          # Extract service account email from credentials
+          SERVICE_ACCOUNT=$(jq -r '.service_account_email' "$GOOGLE_APPLICATION_CREDENTIALS")
+          if [ -z "$SERVICE_ACCOUNT" ]; then
+            echo "ERROR: Could not find service_account_email in credentials"
+            exit 1
+          fi
+          echo "Service account from credentials: $SERVICE_ACCOUNT"
+
+          # Activate the workload identity federation
+          echo "Activating workload identity federation..."
+          gcloud auth login --brief --cred-file="$GOOGLE_APPLICATION_CREDENTIALS"
+
+          # Ensure we're using the right project
           gcloud config set project ${scope.projectId}
+
+          # Verify the service account is active
+          ACTIVE_ACCOUNT=$(gcloud auth list --filter=status:ACTIVE --format="value(account)")
+          if [ "$ACTIVE_ACCOUNT" != "$SERVICE_ACCOUNT" ]; then
+            echo "ERROR: Active account ($ACTIVE_ACCOUNT) does not match expected service account ($SERVICE_ACCOUNT)"
+            exit 1
+          fi
         else
           echo "ERROR: Unexpected credential type: $CRED_TYPE"
           echo "Expected 'external_account' for Workload Identity Federation"
-          exit 1
-        fi
-
-        # Verify authentication
-        echo "Verifying authentication..."
-        if ! gcloud auth list; then
-          echo "ERROR: Authentication verification failed"
           exit 1
         fi
 
@@ -275,8 +287,7 @@ options:
         echo "Project Number: ${scope.projectNumber}"
 
         echo "2. Service Account Information:"
-        SA_EMAIL=$(gcloud config get-value account)
-        echo "Current Service Account: $SA_EMAIL"
+        echo "Current Service Account: $(gcloud auth list --filter=status:ACTIVE --format='value(account)')"
 
         echo "3. Cloud Build API Status:"
         if gcloud services list --enabled --filter="name:cloudbuild.googleapis.com" --project=${scope.projectId}; then
