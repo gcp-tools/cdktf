@@ -245,32 +245,27 @@ options:
 
         echo "Using credentials file: $GOOGLE_APPLICATION_CREDENTIALS"
 
-        # Create a temporary directory for credentials
-        CREDS_DIR=$(mktemp -d)
-        trap 'rm -rf "$CREDS_DIR"' EXIT
+        # Determine the credential type
+        CRED_TYPE=$(jq -r '.type' "$GOOGLE_APPLICATION_CREDENTIALS")
+        echo "Credential type: $CRED_TYPE"
 
-        # Check if the credentials are Base64 encoded
-        if head -n1 "$GOOGLE_APPLICATION_CREDENTIALS" | grep -q '^eyJ'; then
-          echo "Credentials appear to be Base64 encoded, decoding..."
-          base64 -d "$GOOGLE_APPLICATION_CREDENTIALS" > "$CREDS_DIR/decoded_creds.json"
-          export GOOGLE_APPLICATION_CREDENTIALS="$CREDS_DIR/decoded_creds.json"
+        if [ "$CRED_TYPE" = "external_account" ]; then
+          echo "Using Workload Identity Federation credentials"
+          # WIF credentials are handled automatically by gcloud
+          # Just need to ensure we're targeting the right project
+          gcloud config set project ${scope.projectId}
         else
-          echo "Credentials appear to be in JSON format, validating..."
-          if ! jq empty "$GOOGLE_APPLICATION_CREDENTIALS" 2>/dev/null; then
-            echo "ERROR: Credentials file is not valid JSON"
-            exit 1
-          fi
-        fi
-
-        echo "Validating service account key format..."
-        if ! jq -e '.type == "service_account"' "$GOOGLE_APPLICATION_CREDENTIALS" >/dev/null; then
-          echo "ERROR: Credentials file is not a service account key"
-          echo "Content type: $(jq -r '.type' "$GOOGLE_APPLICATION_CREDENTIALS")"
+          echo "ERROR: Unexpected credential type: $CRED_TYPE"
+          echo "Expected 'external_account' for Workload Identity Federation"
           exit 1
         fi
 
-        echo "Activating service account: $(jq -r '.client_email' "$GOOGLE_APPLICATION_CREDENTIALS")"
-        gcloud auth activate-service-account --key-file="$GOOGLE_APPLICATION_CREDENTIALS"
+        # Verify authentication
+        echo "Verifying authentication..."
+        if ! gcloud auth list; then
+          echo "ERROR: Authentication verification failed"
+          exit 1
+        fi
 
         echo "=== DETAILED DIAGNOSTICS ==="
 
@@ -280,7 +275,8 @@ options:
         echo "Project Number: ${scope.projectNumber}"
 
         echo "2. Service Account Information:"
-        echo "Current Service Account: $(gcloud auth list --filter=status:ACTIVE --format='value(account)')"
+        SA_EMAIL=$(gcloud config get-value account)
+        echo "Current Service Account: $SA_EMAIL"
 
         echo "3. Cloud Build API Status:"
         if gcloud services list --enabled --filter="name:cloudbuild.googleapis.com" --project=${scope.projectId}; then
@@ -293,7 +289,6 @@ options:
         # Configure gsutil to use same credentials
         echo "Configuring gsutil authentication..."
         export BOTO_CONFIG=/dev/null
-        gcloud auth configure-docker ${region}-docker.pkg.dev --quiet
 
         echo "4. Storage Bucket Access Test:"
         echo "Testing access to: gs://${bucket.name}/${archive.name}"
@@ -302,7 +297,7 @@ options:
         else
           echo "Storage access failed"
           echo "Checking bucket IAM policy:"
-          gsutil iam get gs://${bucket.name}
+          gsutil iam get gs://${bucket.name} || echo "Failed to get bucket IAM policy"
           exit 1
         fi
 
