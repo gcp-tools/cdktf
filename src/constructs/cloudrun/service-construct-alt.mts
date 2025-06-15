@@ -305,13 +305,22 @@ options:
         fi
         echo "Cloud Build API is enabled according to services list"
 
-        # Double check with a direct API call
-        echo "Verifying API access..."
-        if ! gcloud builds list --limit=1 --project=${scope.projectId} >/dev/null 2>&1; then
-          echo "ERROR: Could not access Cloud Build API"
-          exit 1
-        fi
-        echo "Successfully accessed Cloud Build API"
+        # Double check with a direct API call, retrying to handle IAM propagation delay
+        echo "Verifying API access (will retry for 60 seconds)..."
+        i=1
+        while [ $i -le 6 ]; do
+          if gcloud builds list --limit=1 --project=${scope.projectId} >/dev/null 2>&1; then
+            echo "Successfully accessed Cloud Build API after $i attempts."
+            break
+          fi
+          if [ $i -eq 6 ]; then
+            echo "ERROR: Could not access Cloud Build API after 60 seconds."
+            exit 1
+          fi
+          echo "API access check failed. Waiting 10 seconds before retry ($i/6)..."
+          sleep 10
+          i=$((i + 1))
+        done
 
         # Add a delay to ensure API is fully propagated
         echo "Waiting for API propagation..."
