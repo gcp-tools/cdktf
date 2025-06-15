@@ -174,6 +174,7 @@ export class CloudRunServiceConstructAlt<
       bucket: bucket.name,
       members: [
         `serviceAccount:${scope.projectNumber}@cloudbuild.gserviceaccount.com`,
+        `serviceAccount:${scope.projectNumber}-compute@developer.gserviceaccount.com'`
       ],
       role: 'roles/storage.objectViewer',
     })
