@@ -174,10 +174,11 @@ export class CloudRunServiceConstructAlt<
       bucket: bucket.name,
       members: [
         `serviceAccount:${scope.projectNumber}@cloudbuild.gserviceaccount.com`,
-        `serviceAccount:${scope.projectNumber}-compute@developer.gserviceaccount.com'`
+        `serviceAccount:${scope.projectNumber}-compute@developer.gserviceaccount.com`
       ],
       role: 'roles/storage.objectViewer',
     })
+
     const deployerBinding = new ServiceAccountIamBinding(
       this,
       this.id('deployer-sa-user'),
@@ -187,7 +188,6 @@ export class CloudRunServiceConstructAlt<
         members: [`serviceAccount:${envConfig.deployerSaEmail}`],
       },
     )
-
 
     // --- Image URI & Build YAML ---
     this.imageUri = `${region}-docker.pkg.dev/${scope.projectId}/${repository.name}/${serviceId}:latest`
@@ -237,52 +237,51 @@ options:
         # Trace commands before they are executed.
         set -x
 
-        echo "--- DIAGNOSTICS ---"
-        echo "Executing as user: $(whoami)"
+        echo "=== DETAILED DIAGNOSTICS ==="
+
+        echo "1. Project Information:"
         echo "Current Project ID: $(gcloud config get-value project)"
-        echo "Attempting to run in project: ${scope.projectId}"
+        echo "Target Project ID: ${scope.projectId}"
         echo "Project Number: ${scope.projectNumber}"
-        echo "--- API Status ---"
-        gcloud services list --enabled --filter="name:cloudbuild.googleapis.com" --project=${scope.projectId}
-        echo "--- gcloud auth list ---"
-        gcloud auth list
-        echo "--- gcloud config list ---"
-        gcloud config list --all
-        echo "--- Environment Variables ---"
-        env
-        echo "--- END DIAGNOSTICS ---"
+
+        echo "2. Service Account Information:"
+        echo "Current Service Account: $(gcloud auth list --filter=status:ACTIVE --format='value(account)')"
+
+        echo "3. Cloud Build API Status:"
+        if gcloud services list --enabled --filter="name:cloudbuild.googleapis.com" --project=${scope.projectId}; then
+          echo "Cloud Build API is enabled"
+        else
+          echo "Cloud Build API is NOT enabled"
+          exit 1
+        fi
+
+        echo "4. Storage Bucket Access Test:"
+        echo "Testing access to: gs://${bucket.name}/${archive.name}"
+        if gsutil ls gs://${bucket.name}/${archive.name}; then
+          echo "Storage access successful"
+        else
+          echo "Storage access failed"
+          echo "Checking bucket IAM policy:"
+          gsutil iam get gs://${bucket.name}
+          exit 1
+        fi
+
+        echo "5. Cloud Build Service Account:"
+        echo "Expected Cloud Build SA: ${scope.projectNumber}@cloudbuild.gserviceaccount.com"
+        echo "Expected Compute SA: ${scope.projectNumber}-compute@developer.gserviceaccount.com"
+
+        echo "=== END DIAGNOSTICS ==="
 
         CLOUDBUILD_CONFIG=$(mktemp)
         trap 'rm -f "$CLOUDBUILD_CONFIG"' EXIT
 
-        echo "--- Writing Build Config ---"
-        # Use a "here document" to safely write the YAML to a temp file.
+        echo "Writing build config..."
         cat > "$CLOUDBUILD_CONFIG" <<EOF
 ${cloudbuildYaml}
 EOF
 
-        echo "--- Build Config Contents ---"
-        cat "$CLOUDBUILD_CONFIG"
-        echo "--- End Build Config ---"
-
-        # IAM permissions can take a moment to propagate.
-        # Retry the build submission on failure to handle eventual consistency.
-        i=1
-        while [ $i -le 3 ]; do
-          echo "Submitting build (attempt $i)..."
-          if gcloud builds submit --no-source --config="$CLOUDBUILD_CONFIG" --project=${scope.projectId}; then
-            echo "Build submitted successfully."
-            break
-          fi
-          if [ $i -lt 3 ]; then
-            echo "Build submission failed. Waiting 15 seconds before retry..."
-            sleep 15
-          else
-            echo "Build submission failed after 3 attempts."
-            exit 1
-          fi
-          i=$((i + 1))
-        done
+        echo "Submitting build..."
+        gcloud builds submit --no-source --config="$CLOUDBUILD_CONFIG" --project=${scope.projectId}
       `,
     })
 
