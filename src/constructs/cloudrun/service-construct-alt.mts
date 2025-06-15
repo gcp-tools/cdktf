@@ -291,12 +291,26 @@ options:
         echo "Current Service Account: $(gcloud auth list --filter=status:ACTIVE --format='value(account)')"
 
         echo "3. Cloud Build API Status:"
-        if gcloud services list --enabled --filter="name:cloudbuild.googleapis.com" --project=${scope.projectId}; then
-          echo "Cloud Build API is enabled"
-        else
-          echo "Cloud Build API is NOT enabled"
+        echo "Checking Cloud Build API status in project ${scope.projectId}..."
+
+        # First check if API is enabled
+        if ! gcloud services list --enabled --filter="name:cloudbuild.googleapis.com" --project=${scope.projectId} --format="get(name)" | grep -q "cloudbuild.googleapis.com"; then
+          echo "ERROR: Cloud Build API is not enabled"
           exit 1
         fi
+        echo "Cloud Build API is enabled according to services list"
+
+        # Double check with a direct API call
+        echo "Verifying API access..."
+        if ! gcloud builds list --limit=1 --project=${scope.projectId} >/dev/null 2>&1; then
+          echo "ERROR: Could not access Cloud Build API"
+          exit 1
+        fi
+        echo "Successfully accessed Cloud Build API"
+
+        # Add a delay to ensure API is fully propagated
+        echo "Waiting for API propagation..."
+        sleep 10
 
         # Configure gsutil to use same credentials
         echo "Configuring gsutil authentication..."
@@ -328,7 +342,24 @@ ${cloudbuildYaml}
 EOF
 
         echo "Submitting build..."
-        gcloud builds submit --no-source --config="$CLOUDBUILD_CONFIG" --project=${scope.projectId}
+        echo "Using project: ${scope.projectId}"
+        echo "Current account: $(gcloud config get-value account)"
+
+        # Try the build submission with retries
+        MAX_RETRIES=3
+        for i in $(seq 1 $MAX_RETRIES); do
+          echo "Attempt $i of $MAX_RETRIES..."
+          if gcloud builds submit --no-source --config="$CLOUDBUILD_CONFIG" --project=${scope.projectId}; then
+            echo "Build submitted successfully"
+            break
+          fi
+          if [ $i -eq $MAX_RETRIES ]; then
+            echo "Failed all $MAX_RETRIES attempts"
+            exit 1
+          fi
+          echo "Waiting before retry..."
+          sleep 10
+        done
       `,
     })
 
