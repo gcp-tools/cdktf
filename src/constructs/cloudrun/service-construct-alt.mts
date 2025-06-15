@@ -93,16 +93,6 @@ export class CloudRunServiceConstructAlt<
       },
     )
 
-    const cloudBuildBuilderBinding = new ProjectIamMember(
-      this,
-      this.id('deployer-cloudbuild-builder'),
-      {
-        project: scope.projectId,
-        role: 'roles/cloudbuild.builds.builder',
-        member: `serviceAccount:${envConfig.deployerSaEmail}`,
-      },
-    )
-
     // --- Artifact Registry Repository ---
     const cleanupPolicies =
     imageRetentionCount > 0
@@ -245,7 +235,6 @@ options:
         iamBindingForDeployerBuilds,
         serviceUsageAdminBinding,
         cloudBuildViewerBinding,
-        cloudBuildBuilderBinding,
       ],
       command: `
         # Exit immediately if a command exits with a non-zero status.
