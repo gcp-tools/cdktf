@@ -245,7 +245,31 @@ options:
 
         echo "Using credentials file: $GOOGLE_APPLICATION_CREDENTIALS"
 
-        # Activate service account explicitly
+        # Create a temporary directory for credentials
+        CREDS_DIR=$(mktemp -d)
+        trap 'rm -rf "$CREDS_DIR"' EXIT
+
+        # Check if the credentials are Base64 encoded
+        if head -n1 "$GOOGLE_APPLICATION_CREDENTIALS" | grep -q '^eyJ'; then
+          echo "Credentials appear to be Base64 encoded, decoding..."
+          base64 -d "$GOOGLE_APPLICATION_CREDENTIALS" > "$CREDS_DIR/decoded_creds.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$CREDS_DIR/decoded_creds.json"
+        else
+          echo "Credentials appear to be in JSON format, validating..."
+          if ! jq empty "$GOOGLE_APPLICATION_CREDENTIALS" 2>/dev/null; then
+            echo "ERROR: Credentials file is not valid JSON"
+            exit 1
+          fi
+        fi
+
+        echo "Validating service account key format..."
+        if ! jq -e '.type == "service_account"' "$GOOGLE_APPLICATION_CREDENTIALS" >/dev/null; then
+          echo "ERROR: Credentials file is not a service account key"
+          echo "Content type: $(jq -r '.type' "$GOOGLE_APPLICATION_CREDENTIALS")"
+          exit 1
+        fi
+
+        echo "Activating service account: $(jq -r '.client_email' "$GOOGLE_APPLICATION_CREDENTIALS")"
         gcloud auth activate-service-account --key-file="$GOOGLE_APPLICATION_CREDENTIALS"
 
         echo "=== DETAILED DIAGNOSTICS ==="
