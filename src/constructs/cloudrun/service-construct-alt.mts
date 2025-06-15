@@ -237,6 +237,9 @@ options:
         # Trace commands before they are executed.
         set -x
 
+        # Clear any existing project override
+        unset CLOUDSDK_CORE_PROJECT
+
         # Ensure we're using the right credentials
         if [ -z "$GOOGLE_APPLICATION_CREDENTIALS" ]; then
           echo "ERROR: GOOGLE_APPLICATION_CREDENTIALS environment variable is not set"
@@ -252,25 +255,23 @@ options:
         if [ "$CRED_TYPE" = "external_account" ]; then
           echo "Using Workload Identity Federation credentials"
 
-          # Extract service account email from credentials
-          SERVICE_ACCOUNT=$(jq -r '.service_account_email' "$GOOGLE_APPLICATION_CREDENTIALS")
-          if [ -z "$SERVICE_ACCOUNT" ]; then
-            echo "ERROR: Could not find service_account_email in credentials"
-            exit 1
+          # Check if we're already authenticated
+          CURRENT_ACCOUNT=$(gcloud auth list --filter=status:ACTIVE --format="value(account)")
+          if [ -z "$CURRENT_ACCOUNT" ]; then
+            echo "No active account found, attempting to authenticate..."
+            gcloud auth login --brief --cred-file="$GOOGLE_APPLICATION_CREDENTIALS" --quiet
+          else
+            echo "Already authenticated as: $CURRENT_ACCOUNT"
           fi
-          echo "Service account from credentials: $SERVICE_ACCOUNT"
-
-          # Activate the workload identity federation
-          echo "Activating workload identity federation..."
-          gcloud auth login --brief --cred-file="$GOOGLE_APPLICATION_CREDENTIALS"
 
           # Ensure we're using the right project
+          echo "Setting project to: ${scope.projectId}"
           gcloud config set project ${scope.projectId}
 
-          # Verify the service account is active
-          ACTIVE_ACCOUNT=$(gcloud auth list --filter=status:ACTIVE --format="value(account)")
-          if [ "$ACTIVE_ACCOUNT" != "$SERVICE_ACCOUNT" ]; then
-            echo "ERROR: Active account ($ACTIVE_ACCOUNT) does not match expected service account ($SERVICE_ACCOUNT)"
+          # Verify project setting
+          CURRENT_PROJECT=$(gcloud config get-value project)
+          if [ "$CURRENT_PROJECT" != "${scope.projectId}" ]; then
+            echo "ERROR: Failed to set project. Current: $CURRENT_PROJECT, Expected: ${scope.projectId}"
             exit 1
           fi
         else
