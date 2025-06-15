@@ -88,7 +88,17 @@ export class CloudRunServiceConstructAlt<
       this.id('deployer-cloudbuild-viewer'),
       {
         project: scope.projectId,
-        role: 'roles/logging.viewer',
+        role: 'roles/cloudbuild.viewer',
+        member: `serviceAccount:${envConfig.deployerSaEmail}`,
+      },
+    )
+
+    const cloudBuildBuilderBinding = new ProjectIamMember(
+      this,
+      this.id('deployer-cloudbuild-builder'),
+      {
+        project: scope.projectId,
+        role: 'roles/cloudbuild.builds.builder',
         member: `serviceAccount:${envConfig.deployerSaEmail}`,
       },
     )
@@ -235,6 +245,7 @@ options:
         iamBindingForDeployerBuilds,
         serviceUsageAdminBinding,
         cloudBuildViewerBinding,
+        cloudBuildBuilderBinding,
       ],
       command: `
         # Exit immediately if a command exits with a non-zero status.
