@@ -22,7 +22,7 @@ import { LocalExec } from 'cdktf-local-exec'
 import type { AppStack } from '../../stacks/app-stack.mjs'
 import { envConfig } from '../../utils/env.mjs'
 import { BaseAppConstruct } from '../base-app-construct.mjs'
-import { ProjectService } from '@cdktf/provider-google/lib/project-service/index.js'
+
 
 const sourceDirectory = resolve(cwd(), '..', '..', 'services')
 
