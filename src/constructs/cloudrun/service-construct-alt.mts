@@ -237,6 +237,17 @@ options:
         # Trace commands before they are executed.
         set -x
 
+        # Ensure we're using the right credentials
+        if [ -z "$GOOGLE_APPLICATION_CREDENTIALS" ]; then
+          echo "ERROR: GOOGLE_APPLICATION_CREDENTIALS environment variable is not set"
+          exit 1
+        fi
+
+        echo "Using credentials file: $GOOGLE_APPLICATION_CREDENTIALS"
+
+        # Activate service account explicitly
+        gcloud auth activate-service-account --key-file="$GOOGLE_APPLICATION_CREDENTIALS"
+
         echo "=== DETAILED DIAGNOSTICS ==="
 
         echo "1. Project Information:"
@@ -254,6 +265,11 @@ options:
           echo "Cloud Build API is NOT enabled"
           exit 1
         fi
+
+        # Configure gsutil to use same credentials
+        echo "Configuring gsutil authentication..."
+        export BOTO_CONFIG=/dev/null
+        gcloud auth configure-docker ${region}-docker.pkg.dev --quiet
 
         echo "4. Storage Bucket Access Test:"
         echo "Testing access to: gs://${bucket.name}/${archive.name}"
