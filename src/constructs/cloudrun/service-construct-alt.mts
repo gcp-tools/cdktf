@@ -252,43 +252,33 @@ options:
         # Clear any existing project override
         unset CLOUDSDK_CORE_PROJECT
 
-        # Ensure we're using the right credentials
-        if [ -z "$GOOGLE_APPLICATION_CREDENTIALS" ]; then
-          echo "ERROR: GOOGLE_APPLICATION_CREDENTIALS environment variable is not set"
+        # Get the WIF token from GitHub Actions
+        if [ -z "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" ] || [ -z "$ACTIONS_ID_TOKEN_REQUEST_URL" ]; then
+          echo "ERROR: GitHub Actions WIF token not available"
           exit 1
         fi
 
-        echo "Using credentials file: $GOOGLE_APPLICATION_CREDENTIALS"
+        echo "Using GitHub Actions WIF token"
 
-        # Determine the credential type
-        CRED_TYPE=$(jq -r '.type' "$GOOGLE_APPLICATION_CREDENTIALS")
-        echo "Credential type: $CRED_TYPE"
+        # Get the token
+        TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL" | jq -r '.value')
+        if [ -z "$TOKEN" ]; then
+          echo "ERROR: Failed to get WIF token"
+          exit 1
+        fi
 
-        if [ "$CRED_TYPE" = "external_account" ]; then
-          echo "Using Workload Identity Federation credentials"
+        # Authenticate with GCP using the token
+        echo "Authenticating with GCP..."
+        gcloud auth login --brief --cred-file=<(echo '{"type":"external_account","audience":"//iam.googleapis.com/projects/799601195209/locations/global/workloadIdentityPools/liplan-dev-pool/providers/github-actions-provider","subject_token_type":"urn:ietf:params:oauth:token-type:id_token","token_url":"https://sts.googleapis.com/v1/token","credential_source":{"file":"/dev/stdin"},"service_account_impersonation_url":"https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/liplan-sa@liplan-foundation-1749487766.iam.gserviceaccount.com:generateAccessToken"}' | jq --arg token "$TOKEN" '.credential_source.token = $token') --quiet
 
-          # Check if we're already authenticated
-          CURRENT_ACCOUNT=$(gcloud auth list --filter=status:ACTIVE --format="value(account)")
-          if [ -z "$CURRENT_ACCOUNT" ]; then
-            echo "No active account found, attempting to authenticate..."
-            gcloud auth login --brief --cred-file="$GOOGLE_APPLICATION_CREDENTIALS" --quiet
-          else
-            echo "Already authenticated as: $CURRENT_ACCOUNT"
-          fi
+        # Ensure we're using the right project
+        echo "Setting project to: ${scope.projectId}"
+        gcloud config set project ${scope.projectId}
 
-          # Ensure we're using the right project
-          echo "Setting project to: ${scope.projectId}"
-          gcloud config set project ${scope.projectId}
-
-          # Verify project setting
-          CURRENT_PROJECT=$(gcloud config get-value project)
-          if [ "$CURRENT_PROJECT" != "${scope.projectId}" ]; then
-            echo "ERROR: Failed to set project. Current: $CURRENT_PROJECT, Expected: ${scope.projectId}"
-            exit 1
-          fi
-        else
-          echo "ERROR: Unexpected credential type: $CRED_TYPE"
-          echo "Expected 'external_account' for Workload Identity Federation"
+        # Verify project setting
+        CURRENT_PROJECT=$(gcloud config get-value project)
+        if [ "$CURRENT_PROJECT" != "${scope.projectId}" ]; then
+          echo "ERROR: Failed to set project. Current: $CURRENT_PROJECT, Expected: ${scope.projectId}"
           exit 1
         fi
 
@@ -316,7 +306,7 @@ options:
         echo "Verifying API access (will retry for 60 seconds)..."
         i=1
         while [ $i -le 6 ]; do
-          if gcloud builds list --limit=1 --project=${scope.projectId} >/dev/null 2>&1; then
+          if gcloud builds submit --no-source --config="$CLOUDBUILD_CONFIG" --project=${scope.projectId} >/dev/null 2>&1; then
             echo "Successfully accessed Cloud Build API after $i attempts."
             break
           fi
