@@ -230,10 +230,9 @@ ${buildArgsLines}
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', '${imageUriWithBuildId}']
 timeout: ${buildTimeout}
-serviceAccount: '${scope.stackServiceAccount.email}'
 options:
-  logging: CLOUD_LOGGING_ONLY
   machineType: ${machineType}
+  logging: CLOUD_LOGGING_ONLY
   substitution_option: ALLOW_LOOSE
 `
 
