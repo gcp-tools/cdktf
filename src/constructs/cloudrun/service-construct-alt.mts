@@ -192,6 +192,16 @@ export class CloudRunServiceConstructAlt<
       role: 'roles/storage.objectViewer',
     })
 
+    const deployerCanActAsCloudBuildSa = new ServiceAccountIamBinding(
+      this,
+      this.id('deployer-can-act-as-cloud-build-sa'),
+      {
+        serviceAccountId: `projects/${scope.projectId}/serviceAccounts/${scope.projectNumber}@cloudbuild.gserviceaccount.com`,
+        role: 'roles/iam.serviceAccountUser',
+        members: [`serviceAccount:${envConfig.deployerSaEmail}`],
+      },
+    )
+
     const deployerBinding = new ServiceAccountIamBinding(
       this,
       this.id('deployer-sa-user'),
@@ -243,6 +253,7 @@ options:
         cloudBuildServiceAccountBinding,
         iamBindingForDeployerBuilds,
         cloudBuildViewerBinding,
+        deployerCanActAsCloudBuildSa,
       ],
       command: `
         # Exit immediately if a command exits with a non-zero status.
