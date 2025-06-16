@@ -267,9 +267,25 @@ options:
           exit 1
         fi
 
+        # Create temporary credential file
+        CRED_FILE=$(mktemp)
+        trap 'rm -f "$CRED_FILE"' EXIT
+
+        # Write the credential configuration
+        echo '{
+          "type": "external_account",
+          "audience": "//iam.googleapis.com/projects/799601195209/locations/global/workloadIdentityPools/liplan-dev-pool/providers/github-actions-provider",
+          "subject_token_type": "urn:ietf:params:oauth:token-type:id_token",
+          "token_url": "https://sts.googleapis.com/v1/token",
+          "credential_source": {
+            "token": "'"$TOKEN"'"
+          },
+          "service_account_impersonation_url": "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/liplan-sa@liplan-foundation-1749487766.iam.gserviceaccount.com:generateAccessToken"
+        }' > "$CRED_FILE"
+
         # Authenticate with GCP using the token
         echo "Authenticating with GCP..."
-        gcloud auth login --brief --cred-file=<(echo '{"type":"external_account","audience":"//iam.googleapis.com/projects/799601195209/locations/global/workloadIdentityPools/liplan-dev-pool/providers/github-actions-provider","subject_token_type":"urn:ietf:params:oauth:token-type:id_token","token_url":"https://sts.googleapis.com/v1/token","credential_source":{"file":"/dev/stdin"},"service_account_impersonation_url":"https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/liplan-sa@liplan-foundation-1749487766.iam.gserviceaccount.com:generateAccessToken"}' | jq --arg token "$TOKEN" '.credential_source.token = $token') --quiet
+        gcloud auth login --brief --cred-file="$CRED_FILE" --quiet
 
         # Ensure we're using the right project
         echo "Setting project to: ${scope.projectId}"
