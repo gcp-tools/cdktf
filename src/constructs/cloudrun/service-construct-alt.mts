@@ -258,49 +258,18 @@ options:
           echo "ERROR: GOOGLE_APPLICATION_CREDENTIALS not set"
           exit 1
         fi
-
         if [ ! -f "$GOOGLE_APPLICATION_CREDENTIALS" ]; then
           echo "ERROR: Credentials file not found at $GOOGLE_APPLICATION_CREDENTIALS"
           exit 1
         fi
-
         echo "Using credentials file: $GOOGLE_APPLICATION_CREDENTIALS"
-        echo "Credentials file contents:"
-        cat "$GOOGLE_APPLICATION_CREDENTIALS"
 
-        # Ensure we're using the right project
-        echo "Setting project to: ${scope.projectId}"
-        gcloud config set project ${scope.projectId}
+        # Set a common gcloud flag
+        GCLOUD_AUTH_FLAG="--credential-file-override=$GOOGLE_APPLICATION_CREDENTIALS"
 
-        # Verify project setting
-        CURRENT_PROJECT=$(gcloud config get-value project)
-        if [ "$CURRENT_PROJECT" != "${scope.projectId}" ]; then
-          echo "ERROR: Failed to set project. Current: $CURRENT_PROJECT, Expected: ${scope.projectId}"
-          exit 1
-        fi
-
-        echo "=== DETAILED DIAGNOSTICS ==="
-
-        echo "1. Project Information:"
-        echo "Current Project ID: $(gcloud config get-value project)"
-        echo "Target Project ID: ${scope.projectId}"
-        echo "Project Number: ${scope.projectNumber}"
-
-        echo "2. Service Account Information:"
-        echo "Current Service Account: $(gcloud auth list --filter=status:ACTIVE --format='value(account)')"
-        echo "Expected Service Account: ${scope.stackServiceAccount.email}"
-
-        echo "3. Cloud Build API Status:"
-        echo "Checking Cloud Build API status in project ${scope.projectId}..."
-
-        # First check if API is enabled
-        if ! gcloud services list --enabled --filter="name:cloudbuild.googleapis.com" --project=${scope.projectId} --format="get(name)" | grep -q "cloudbuild.googleapis.com"; then
-          echo "ERROR: Cloud Build API is not enabled"
-          exit 1
-        fi
-        echo "Cloud Build API is enabled according to services list"
-
-        echo "=== END DIAGNOSTICS ==="
+        # Configure gsutil to use same credentials
+        echo "Configuring gsutil authentication..."
+        export BOTO_CONFIG=/dev/null
 
         CLOUDBUILD_CONFIG=$(mktemp)
         trap 'rm -f "$CLOUDBUILD_CONFIG"' EXIT
@@ -311,15 +280,11 @@ ${cloudbuildYaml}
 EOF
 
         echo "Submitting build..."
-        echo "Using project: ${scope.projectId}"
-        echo "Current account: $(gcloud config get-value account)"
-        echo "Current credentials file: $GOOGLE_APPLICATION_CREDENTIALS"
-
         # Try the build submission with retries
         MAX_RETRIES=3
         for i in $(seq 1 $MAX_RETRIES); do
           echo "Attempt $i of $MAX_RETRIES..."
-          if gcloud builds submit --no-source --config="$CLOUDBUILD_CONFIG" --project=${scope.projectId} 2>&1; then
+          if gcloud $GCLOUD_AUTH_FLAG builds submit --no-source --config="$CLOUDBUILD_CONFIG" --project=${scope.projectId}; then
             echo "Build submitted successfully"
             break
           fi
@@ -327,7 +292,7 @@ EOF
             echo "Failed all $MAX_RETRIES attempts"
             exit 1
           fi
-          echo "Waiting before retry..."
+          echo "Waiting 10 seconds before retry..."
           sleep 10
         done
       `,
@@ -340,8 +305,9 @@ EOF
       {
         dependsOn: [buildStep],
         command: `
+          GCLOUD_AUTH_FLAG="--credential-file-override=$GOOGLE_APPLICATION_CREDENTIALS"
           for i in {1..5}; do
-            if gcloud container images describe ${this.imageUri} --project=${scope.projectId} >/dev/null 2>&1; then
+            if gcloud $GCLOUD_AUTH_FLAG container images describe ${this.imageUri} --project=${scope.projectId} >/dev/null 2>&1; then
               echo "Image found after $i attempts."
               exit 0
             fi
