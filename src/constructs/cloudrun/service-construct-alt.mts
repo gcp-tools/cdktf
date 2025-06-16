@@ -120,17 +120,14 @@ export class CloudRunServiceConstructAlt<
       imageRetentionCount > 0
         ? [
             {
-              id: 'keep-most-recent',
-              action: 'KEEP',
+              id: 'default-cleanup-policy',
+              action: 'DELETE',
               condition: {
                 packageNamePrefixes: [serviceId.toLowerCase()],
                 tagState: 'ANY',
                 newerCountThan: imageRetentionCount,
+                olderThan: 'P90D', // Delete images older than 90 days
               },
-            },
-            {
-              id: 'delete-old-images',
-              action: 'DELETE',
             },
           ]
         : undefined
