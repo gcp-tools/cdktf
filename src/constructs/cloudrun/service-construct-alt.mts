@@ -252,47 +252,18 @@ options:
         # Clear any existing project override
         unset CLOUDSDK_CORE_PROJECT
 
-        # Get the WIF token from GitHub Actions
-        if [ -z "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" ] || [ -z "$ACTIONS_ID_TOKEN_REQUEST_URL" ]; then
-          echo "ERROR: GitHub Actions WIF token not available"
+        # Verify credentials file exists
+        if [ -z "$GOOGLE_APPLICATION_CREDENTIALS" ]; then
+          echo "ERROR: GOOGLE_APPLICATION_CREDENTIALS not set"
           exit 1
         fi
 
-        echo "Using GitHub Actions WIF token"
-
-        # Get the token
-        TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL" | jq -r '.value')
-        if [ -z "$TOKEN" ]; then
-          echo "ERROR: Failed to get WIF token"
+        if [ ! -f "$GOOGLE_APPLICATION_CREDENTIALS" ]; then
+          echo "ERROR: Credentials file not found at $GOOGLE_APPLICATION_CREDENTIALS"
           exit 1
         fi
 
-        # Create temporary credential file
-        CRED_FILE=$(mktemp)
-        trap 'rm -f "$CRED_FILE"' EXIT
-
-        # Write the credential configuration
-        echo '{
-          "type": "external_account",
-          "audience": "//iam.googleapis.com/projects/799601195209/locations/global/workloadIdentityPools/liplan-dev-pool/providers/github-actions-provider",
-          "subject_token_type": "urn:ietf:params:oauth:token-type:id_token",
-          "token_url": "https://sts.googleapis.com/v1/token",
-          "credential_source": {
-            "url": "https://token.actions.githubusercontent.com",
-            "headers": {
-              "Authorization": "Bearer '"$TOKEN"'"
-            },
-            "format": {
-              "type": "json",
-              "subject_token_field_name": "value"
-            }
-          },
-          "service_account_impersonation_url": "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/liplan-sa@liplan-foundation-1749487766.iam.gserviceaccount.com:generateAccessToken"
-        }' > "$CRED_FILE"
-
-        # Authenticate with GCP using the token
-        echo "Authenticating with GCP..."
-        gcloud auth login --brief --cred-file="$CRED_FILE" --quiet
+        echo "Using credentials file: $GOOGLE_APPLICATION_CREDENTIALS"
 
         # Ensure we're using the right project
         echo "Setting project to: ${scope.projectId}"
@@ -333,9 +304,14 @@ options:
         trap 'rm -f "$API_CHECK_CONFIG"' EXIT
         echo 'steps: []' > "$API_CHECK_CONFIG"
 
+        echo "Using config file: $API_CHECK_CONFIG"
+        echo "Config file contents:"
+        cat "$API_CHECK_CONFIG"
+
         i=1
         while [ $i -le 6 ]; do
-          if gcloud builds submit --no-source --config="$API_CHECK_CONFIG" --project=${scope.projectId} >/dev/null 2>&1; then
+          echo "Attempt $i: Running gcloud builds submit..."
+          if gcloud builds submit --no-source --config="$API_CHECK_CONFIG" --project=${scope.projectId} 2>&1; then
             echo "Successfully accessed Cloud Build API after $i attempts."
             break
           fi
