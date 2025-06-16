@@ -99,7 +99,7 @@ export class CloudRunServiceConstructAlt<
       this.id('deployer-cloudbuild-viewer'),
       {
         project: scope.projectId,
-        role: 'roles/cloudbuild.viewer',
+        role: 'roles/cloudbuild.builds.viewer',
         members: [`serviceAccount:${envConfig.deployerSaEmail}`],
         dependsOn: [serviceUsageAdminBinding],
       },
