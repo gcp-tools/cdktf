@@ -1,7 +1,6 @@
 import { GoogleBetaProvider } from '@cdktf/provider-google-beta/lib/provider/index.js'
 import { GoogleProvider } from '@cdktf/provider-google/lib/provider/index.js'
 import { LocalProvider } from '@cdktf/provider-local/lib/provider/index.js'
-import { NullProvider } from '@cdktf/provider-null/lib/provider/index.js'
 import { RandomProvider } from '@cdktf/provider-random/lib/provider/index.js'
 import { GcsBackend, TerraformStack } from 'cdktf'
 import type { Construct } from 'constructs'
@@ -47,7 +46,6 @@ export class BaseStack<T extends BaseStackConfig> extends TerraformStack {
 
     new RandomProvider(this, 'random-provider')
 
-    new NullProvider(this, 'null-provider')
     new LocalProvider(this, 'local-provider')
 
     new GcsBackend(this, {
