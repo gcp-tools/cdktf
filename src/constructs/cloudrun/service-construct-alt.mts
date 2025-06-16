@@ -300,58 +300,6 @@ options:
         fi
         echo "Cloud Build API is enabled according to services list"
 
-        # Double check with a direct API call, retrying to handle IAM propagation delay
-        echo "Verifying API access (will retry for 60 seconds)..."
-
-        # Create a minimal config file for API check
-        API_CHECK_CONFIG=$(mktemp)
-        trap 'rm -f "$API_CHECK_CONFIG"' EXIT
-        echo 'steps:
-  - name: "gcr.io/cloud-builders/gsutil"
-    args: ["version"]
-timeout: "60s"
-options:
-  serviceAccount: "${scope.stackServiceAccount.email}"' > "$API_CHECK_CONFIG"
-
-        echo "Using config file: $API_CHECK_CONFIG"
-        echo "Config file contents:"
-        cat "$API_CHECK_CONFIG"
-
-        i=1
-        while [ $i -le 6 ]; do
-          echo "Attempt $i: Running gcloud builds submit..."
-          if gcloud builds submit --no-source --config="$API_CHECK_CONFIG" --project=${scope.projectId} 2>&1; then
-            echo "Successfully accessed Cloud Build API after $i attempts."
-            break
-          fi
-          if [ $i -eq 6 ]; then
-            echo "ERROR: Could not access Cloud Build API after 60 seconds."
-            exit 1
-          fi
-          echo "API access check failed. Waiting 10 seconds before retry ($i/6)..."
-          sleep 10
-          i=$((i + 1))
-        done
-
-        # Configure gsutil to use same credentials
-        echo "Configuring gsutil authentication..."
-        export BOTO_CONFIG=/dev/null
-
-        echo "4. Storage Bucket Access Test:"
-        echo "Testing access to: gs://${bucket.name}/${archive.name}"
-        if gsutil ls gs://${bucket.name}/${archive.name}; then
-          echo "Storage access successful"
-        else
-          echo "Storage access failed"
-          echo "Checking bucket IAM policy:"
-          gsutil iam get gs://${bucket.name} || echo "Failed to get bucket IAM policy"
-          exit 1
-        fi
-
-        echo "5. Cloud Build Service Account:"
-        echo "Expected Cloud Build SA: ${scope.projectNumber}@cloudbuild.gserviceaccount.com"
-        echo "Expected Compute SA: ${scope.projectNumber}-compute@developer.gserviceaccount.com"
-
         echo "=== END DIAGNOSTICS ==="
 
         CLOUDBUILD_CONFIG=$(mktemp)
