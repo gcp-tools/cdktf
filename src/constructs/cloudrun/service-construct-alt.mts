@@ -246,16 +246,12 @@ EOF
       `,
     })
 
-    // --- Image Propagation Delay ---
-    // Instead of polling with a script, use a declarative sleep to wait
-    // for the image to be available after the build completes. This is a
-    // cleaner way to handle eventual consistency.
     const imagePropagationDelay = new Sleep(
       this,
       this.id('image-propagation-delay'),
       {
         createDuration: '30s',
-        dependsOn: [buildStep as any],
+        dependsOn: [buildStep],
       },
     )
 
