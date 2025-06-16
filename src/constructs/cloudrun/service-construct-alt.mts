@@ -278,7 +278,14 @@ options:
           "subject_token_type": "urn:ietf:params:oauth:token-type:id_token",
           "token_url": "https://sts.googleapis.com/v1/token",
           "credential_source": {
-            "token": "'"$TOKEN"'"
+            "url": "https://token.actions.githubusercontent.com",
+            "headers": {
+              "Authorization": "Bearer '"$TOKEN"'"
+            },
+            "format": {
+              "type": "json",
+              "subject_token_field_name": "value"
+            }
           },
           "service_account_impersonation_url": "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/liplan-sa@liplan-foundation-1749487766.iam.gserviceaccount.com:generateAccessToken"
         }' > "$CRED_FILE"
