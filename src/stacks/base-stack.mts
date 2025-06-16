@@ -32,7 +32,6 @@ export class BaseStack<T extends BaseStackConfig> extends TerraformStack {
       this,
       this.id('provider', 'google'),
       {
-        // project: envConfig.projectId,
         region: envConfig.regions[0],
       },
     )
@@ -41,7 +40,6 @@ export class BaseStack<T extends BaseStackConfig> extends TerraformStack {
       this,
       this.id('provider', 'google', 'beta'),
       {
-        // project: this.projectId,
         region: envConfig.regions[0],
       },
     )
