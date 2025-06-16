@@ -302,7 +302,10 @@ options:
         # Create a minimal config file for API check
         API_CHECK_CONFIG=$(mktemp)
         trap 'rm -f "$API_CHECK_CONFIG"' EXIT
-        echo 'steps: []' > "$API_CHECK_CONFIG"
+        echo 'steps:
+  - name: "gcr.io/cloud-builders/gsutil"
+    args: ["version"]
+timeout: "60s"' > "$API_CHECK_CONFIG"
 
         echo "Using config file: $API_CHECK_CONFIG"
         echo "Config file contents:"
