@@ -13,6 +13,7 @@ import { ArtifactRegistryRepository } from '@cdktf/provider-google/lib/artifact-
 import { CloudRunServiceIamBinding } from '@cdktf/provider-google/lib/cloud-run-service-iam-binding/index.js'
 import { CloudRunV2Service } from '@cdktf/provider-google/lib/cloud-run-v2-service/index.js'
 import { ProjectIamMember } from '@cdktf/provider-google/lib/project-iam-member/index.js'
+import { ProjectIamBinding } from '@cdktf/provider-google/lib/project-iam-binding/index.js'
 import { ServiceAccountIamBinding } from '@cdktf/provider-google/lib/service-account-iam-binding/index.js'
 import { StorageBucketIamBinding } from '@cdktf/provider-google/lib/storage-bucket-iam-binding/index.js'
 import { StorageBucketObject } from '@cdktf/provider-google/lib/storage-bucket-object/index.js'
@@ -93,13 +94,13 @@ export class CloudRunServiceConstructAlt<
       },
     )
 
-    const cloudBuildViewerBinding = new ProjectIamMember(
+    const cloudBuildViewerBinding = new ProjectIamBinding(
       this,
       this.id('deployer-cloudbuild-viewer'),
       {
         project: scope.projectId,
         role: 'roles/cloudbuild.viewer',
-        member: `serviceAccount:${envConfig.deployerSaEmail}`,
+        members: [`serviceAccount:${envConfig.deployerSaEmail}`],
         dependsOn: [serviceUsageAdminBinding],
       },
     )
