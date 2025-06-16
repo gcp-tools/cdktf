@@ -230,10 +230,11 @@ ${buildArgsLines}
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', '${imageUriWithBuildId}']
 timeout: ${buildTimeout}
+serviceAccount: '${scope.stackServiceAccount.email}'
 options:
-  machineType: ${machineType}
   logging: CLOUD_LOGGING_ONLY
-  serviceAccount: '${scope.stackServiceAccount.email}'
+  machineType: ${machineType}
+  substitution_option: ALLOW_LOOSE
 `
 
     // --- LocalExec Build Step ---
