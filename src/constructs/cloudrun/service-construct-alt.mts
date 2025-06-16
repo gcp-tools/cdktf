@@ -327,9 +327,15 @@ options:
 
         # Double check with a direct API call, retrying to handle IAM propagation delay
         echo "Verifying API access (will retry for 60 seconds)..."
+
+        # Create a minimal config file for API check
+        API_CHECK_CONFIG=$(mktemp)
+        trap 'rm -f "$API_CHECK_CONFIG"' EXIT
+        echo 'steps: []' > "$API_CHECK_CONFIG"
+
         i=1
         while [ $i -le 6 ]; do
-          if gcloud builds submit --no-source --config="$CLOUDBUILD_CONFIG" --project=${scope.projectId} >/dev/null 2>&1; then
+          if gcloud builds submit --no-source --config="$API_CHECK_CONFIG" --project=${scope.projectId} >/dev/null 2>&1; then
             echo "Successfully accessed Cloud Build API after $i attempts."
             break
           fi
