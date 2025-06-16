@@ -20,6 +20,7 @@ export class AppStack extends BaseStack<AppStackConfig> {
   protected appProjectRemoteState: DataTerraformRemoteStateGcs
   protected networkInfraRemoteState: DataTerraformRemoteStateGcs
 
+  public deployerEditorBinding: ProjectIamMember
   public projectId: string
   public projectName: string
   public projectNumber: string
@@ -76,6 +77,17 @@ export class AppStack extends BaseStack<AppStackConfig> {
       description: `A generated service account for project '${this.projectId}'`,
       project: this.projectId,
     })
+
+    this.deployerEditorBinding = new ProjectIamMember(
+      this,
+      this.id('iam', 'deployer', 'editor'),
+      {
+        project: this.projectId,
+        role: 'roles/editor',
+        member: `serviceAccount:${envConfig.deployerSaEmail}`,
+      },
+    )
+
     const serviceAccount = `serviceAccount:${this.stackServiceAccount.email}`
 
     new ProjectIamMember(

@@ -13,13 +13,13 @@ import { ArtifactRegistryRepository } from '@cdktf/provider-google/lib/artifact-
 import { CloudRunServiceIamBinding } from '@cdktf/provider-google/lib/cloud-run-service-iam-binding/index.js'
 import { CloudRunV2Service } from '@cdktf/provider-google/lib/cloud-run-v2-service/index.js'
 import { ProjectIamMember } from '@cdktf/provider-google/lib/project-iam-member/index.js'
-import { ProjectIamBinding } from '@cdktf/provider-google/lib/project-iam-binding/index.js'
 import { ServiceAccountIamBinding } from '@cdktf/provider-google/lib/service-account-iam-binding/index.js'
 import { StorageBucketIamBinding } from '@cdktf/provider-google/lib/storage-bucket-iam-binding/index.js'
 import { StorageBucketObject } from '@cdktf/provider-google/lib/storage-bucket-object/index.js'
 import { StorageBucket } from '@cdktf/provider-google/lib/storage-bucket/index.js'
 import type { ITerraformDependable } from 'cdktf'
 import { LocalExec } from 'cdktf-local-exec'
+import { Sleep } from '@cdktf/provider-time/lib/sleep/index.js'
 import type { AppStack } from '../../stacks/app-stack.mjs'
 import { envConfig } from '../../utils/env.mjs'
 import { BaseAppConstruct } from '../base-app-construct.mjs'
@@ -83,38 +83,8 @@ export class CloudRunServiceConstructAlt<
     const dockerfile = 'Dockerfile'
 
     // --- IAM Permissions ---
-    // Create a dependency chain to avoid race conditions.
-    const serviceUsageAdminBinding = new ProjectIamMember(
-      this,
-      this.id('service-usage-admin'),
-      {
-        project: scope.projectId,
-        role: 'roles/serviceusage.serviceUsageAdmin',
-        member: `serviceAccount:${envConfig.deployerSaEmail}`,
-      },
-    )
-
-    const cloudBuildViewerBinding = new ProjectIamBinding(
-      this,
-      this.id('deployer-cloudbuild-viewer'),
-      {
-        project: scope.projectId,
-        role: 'roles/cloudbuild.builds.viewer',
-        members: [`serviceAccount:${envConfig.deployerSaEmail}`],
-        dependsOn: [serviceUsageAdminBinding],
-      },
-    )
-
-    const iamBindingForDeployerBuilds = new ProjectIamMember(
-      this,
-      this.id('deployer-cloudbuild-builder'),
-      {
-        project: scope.projectId,
-        role: 'roles/cloudbuild.builds.builder',
-        member: `serviceAccount:${envConfig.deployerSaEmail}`,
-        dependsOn: [cloudBuildViewerBinding],
-      },
-    )
+    // The deployer's editor permission is now managed by the AppStack.
+    // This construct will depend on it via scope.deployerEditorBinding.
 
     // --- Artifact Registry Repository ---
     const cleanupPolicies =
@@ -173,6 +143,8 @@ export class CloudRunServiceConstructAlt<
       source: archiveFile.outputPath,
     })
 
+    // Grant the Cloud Build service account permission to write to the repo.
+    // This depends on the deployer having permissions to view/edit IAM policies.
     const cloudBuildServiceAccountBinding = new ProjectIamMember(
       this,
       this.id('cloudbuild-registry-writer'),
@@ -180,9 +152,10 @@ export class CloudRunServiceConstructAlt<
         project: scope.projectId,
         role: 'roles/artifactregistry.writer',
         member: `serviceAccount:${scope.projectNumber}@cloudbuild.gserviceaccount.com`,
-        dependsOn: [repository, iamBindingForDeployerBuilds],
+        dependsOn: [repository, scope.deployerEditorBinding],
       },
     )
+
     new StorageBucketIamBinding(this, this.id('cloudbuild-bucket-reader'), {
       bucket: bucket.name,
       members: [
@@ -192,13 +165,6 @@ export class CloudRunServiceConstructAlt<
       role: 'roles/storage.objectViewer',
     })
 
-    const deployerSaAdmin = new ProjectIamMember(this, this.id('deployer-sa-admin'), {
-      project: scope.projectId,
-      role: 'roles/iam.serviceAccountAdmin',
-      member: `serviceAccount:${envConfig.deployerSaEmail}`,
-      dependsOn: [iamBindingForDeployerBuilds],
-    })
-
     const deployerCanActAsCloudBuildSa = new ServiceAccountIamBinding(
       this,
       this.id('deployer-can-act-as-cloud-build-sa'),
@@ -206,7 +172,7 @@ export class CloudRunServiceConstructAlt<
         serviceAccountId: `projects/${scope.projectId}/serviceAccounts/${scope.projectNumber}@cloudbuild.gserviceaccount.com`,
         role: 'roles/iam.serviceAccountUser',
         members: [`serviceAccount:${envConfig.deployerSaEmail}`],
-        dependsOn: [deployerSaAdmin, cloudBuildServiceAccountBinding],
+        dependsOn: [scope.deployerEditorBinding, cloudBuildServiceAccountBinding],
       },
     )
 
@@ -258,9 +224,6 @@ options:
     const buildStep = new LocalExec(this, this.id('build-step'), {
       dependsOn: [
         archive,
-        cloudBuildServiceAccountBinding,
-        iamBindingForDeployerBuilds,
-        cloudBuildViewerBinding,
         deployerCanActAsCloudBuildSa,
       ],
       command: `
@@ -269,73 +232,30 @@ options:
         # Trace commands before they are executed.
         set -x
 
-        # Clear any existing project override
-        unset CLOUDSDK_CORE_PROJECT
-
-        # Verify credentials file exists
-        if [ -z "$GOOGLE_APPLICATION_CREDENTIALS" ]; then
-          echo "ERROR: GOOGLE_APPLICATION_CREDENTIALS not set"
-          exit 1
-        fi
-        if [ ! -f "$GOOGLE_APPLICATION_CREDENTIALS" ]; then
-          echo "ERROR: Credentials file not found at $GOOGLE_APPLICATION_CREDENTIALS"
-          exit 1
-        fi
-        echo "Using credentials file: $GOOGLE_APPLICATION_CREDENTIALS"
-
-        # Set a common gcloud flag
-        GCLOUD_AUTH_FLAG="--credential-file-override=$GOOGLE_APPLICATION_CREDENTIALS"
-
-        # Configure gsutil to use same credentials
-        echo "Configuring gsutil authentication..."
-        export BOTO_CONFIG=/dev/null
+        # The gcloud command will use the ambient authentication from the
+        # environment (e.g., from Workload Identity Federation in CI/CD).
+        echo "Submitting build to project ${scope.projectId}..."
 
         CLOUDBUILD_CONFIG=$(mktemp)
         trap 'rm -f "$CLOUDBUILD_CONFIG"' EXIT
 
-        echo "Writing build config..."
         cat > "$CLOUDBUILD_CONFIG" <<EOF
 ${cloudbuildYaml}
 EOF
-
-        echo "Submitting build..."
-        # Try the build submission with retries
-        MAX_RETRIES=3
-        for i in $(seq 1 $MAX_RETRIES); do
-          echo "Attempt $i of $MAX_RETRIES..."
-          if gcloud $GCLOUD_AUTH_FLAG builds submit --no-source --config="$CLOUDBUILD_CONFIG" --project=${scope.projectId}; then
-            echo "Build submitted successfully"
-            break
-          fi
-          if [ $i -eq $MAX_RETRIES ]; then
-            echo "Failed all $MAX_RETRIES attempts"
-            exit 1
-          fi
-          echo "Waiting 10 seconds before retry..."
-          sleep 10
-        done
+        gcloud builds submit --no-source --config="$CLOUDBUILD_CONFIG" --project=${scope.projectId}
       `,
     })
 
     // --- Image Propagation Delay ---
-    const imagePropagationDelay = new LocalExec(
+    // Instead of polling with a script, use a declarative sleep to wait
+    // for the image to be available after the build completes. This is a
+    // cleaner way to handle eventual consistency.
+    const imagePropagationDelay = new Sleep(
       this,
       this.id('image-propagation-delay'),
       {
-        dependsOn: [buildStep],
-        command: `
-          GCLOUD_AUTH_FLAG="--credential-file-override=$GOOGLE_APPLICATION_CREDENTIALS"
-          for i in {1..5}; do
-            if gcloud $GCLOUD_AUTH_FLAG container images describe ${this.imageUri} --project=${scope.projectId} >/dev/null 2>&1; then
-              echo "Image found after $i attempts."
-              exit 0
-            fi
-            echo "Image not yet found. Waiting 15 seconds..."
-            sleep 15
-          done
-          echo "Image not found after 5 attempts."
-          exit 1
-        `,
+        createDuration: '30s',
+        dependsOn: [buildStep as any],
       },
     )
 
