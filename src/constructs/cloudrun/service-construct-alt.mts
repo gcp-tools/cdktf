@@ -81,8 +81,18 @@ export class CloudRunServiceConstructAlt<
     const sourceDir = resolve(sourceDirectory, scope.stackId)
     const dockerfile = 'Dockerfile'
 
+    // --- IAM Permissions ---
+    // Create a dependency chain to avoid race conditions.
+    const serviceUsageAdminBinding = new ProjectIamMember(
+      this,
+      this.id('service-usage-admin'),
+      {
+        project: scope.projectId,
+        role: 'roles/serviceusage.serviceUsageAdmin',
+        member: `serviceAccount:${envConfig.deployerSaEmail}`,
+      },
+    )
 
-    // Grant Cloud Build permissions to the deployer service account
     const cloudBuildViewerBinding = new ProjectIamMember(
       this,
       this.id('deployer-cloudbuild-viewer'),
@@ -90,38 +100,40 @@ export class CloudRunServiceConstructAlt<
         project: scope.projectId,
         role: 'roles/cloudbuild.viewer',
         member: `serviceAccount:${envConfig.deployerSaEmail}`,
+        dependsOn: [serviceUsageAdminBinding],
       },
     )
 
-    const cloudBuildBuilderBinding = new ProjectIamMember(
+    const iamBindingForDeployerBuilds = new ProjectIamMember(
       this,
       this.id('deployer-cloudbuild-builder'),
       {
         project: scope.projectId,
         role: 'roles/cloudbuild.builds.builder',
         member: `serviceAccount:${envConfig.deployerSaEmail}`,
+        dependsOn: [cloudBuildViewerBinding],
       },
     )
 
     // --- Artifact Registry Repository ---
     const cleanupPolicies =
-    imageRetentionCount > 0
-      ? [
-          {
-            id: 'keep-most-recent',
-            action: 'KEEP',
-            condition: {
-              packageNamePrefixes: [serviceId.toLowerCase()],
-              tagState: 'ANY',
-              newerCountThan: imageRetentionCount,
+      imageRetentionCount > 0
+        ? [
+            {
+              id: 'keep-most-recent',
+              action: 'KEEP',
+              condition: {
+                packageNamePrefixes: [serviceId.toLowerCase()],
+                tagState: 'ANY',
+                newerCountThan: imageRetentionCount,
+              },
             },
-          },
-          {
-            id: 'delete-old-images',
-            action: 'DELETE',
-          },
-        ]
-      : undefined
+            {
+              id: 'delete-old-images',
+              action: 'DELETE',
+            },
+          ]
+        : undefined
     const repository = new ArtifactRegistryRepository(this, this.id('repo'), {
       repositoryId: this.id('repo').toLowerCase(),
       format: 'DOCKER',
@@ -156,25 +168,6 @@ export class CloudRunServiceConstructAlt<
       source: archiveFile.outputPath,
     })
 
-    // --- IAM Permissions ---
-    const iamBindingForDeployerBuilds = new ProjectIamMember(
-      this,
-      this.id('deployer-cloudbuild-builder'),
-      {
-        project: scope.projectId,
-        role: 'roles/cloudbuild.builds.builder',
-        member: `serviceAccount:${envConfig.deployerSaEmail}`,
-      },
-    )
-    const serviceUsageAdminBinding = new ProjectIamMember(
-      this,
-      this.id('service-usage-admin'),
-      {
-        project: scope.projectId,
-        role: 'roles/serviceusage.serviceUsageAdmin',
-        member: `serviceAccount:${envConfig.deployerSaEmail}`,
-      },
-    )
     const cloudBuildServiceAccountBinding = new ProjectIamMember(
       this,
       this.id('cloudbuild-registry-writer'),
@@ -182,7 +175,7 @@ export class CloudRunServiceConstructAlt<
         project: scope.projectId,
         role: 'roles/artifactregistry.writer',
         member: `serviceAccount:${scope.projectNumber}@cloudbuild.gserviceaccount.com`,
-        dependsOn: [repository],
+        dependsOn: [repository, iamBindingForDeployerBuilds],
       },
     )
     new StorageBucketIamBinding(this, this.id('cloudbuild-bucket-reader'), {
@@ -243,9 +236,7 @@ options:
         archive,
         cloudBuildServiceAccountBinding,
         iamBindingForDeployerBuilds,
-        serviceUsageAdminBinding,
         cloudBuildViewerBinding,
-        cloudBuildBuilderBinding,
       ],
       command: `
         # Exit immediately if a command exits with a non-zero status.
@@ -332,10 +323,6 @@ options:
           sleep 10
           i=$((i + 1))
         done
-
-        # Add a delay to ensure API is fully propagated
-        echo "Waiting for API propagation..."
-        sleep 10
 
         # Configure gsutil to use same credentials
         echo "Configuring gsutil authentication..."
