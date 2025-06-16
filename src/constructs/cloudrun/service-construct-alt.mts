@@ -117,20 +117,27 @@ export class CloudRunServiceConstructAlt<
 
     // --- Artifact Registry Repository ---
     const cleanupPolicies =
-      imageRetentionCount > 0
-        ? [
-            {
-              id: 'default-cleanup-policy',
-              action: 'DELETE',
-              condition: {
-                packageNamePrefixes: [serviceId.toLowerCase()],
-                tagState: 'ANY',
-                newerCountThan: imageRetentionCount,
-                olderThan: 'P90D', // Delete images older than 90 days
-              },
+    imageRetentionCount > 0
+      ? [
+          {
+            id: 'keep-most-recent',
+            action: 'KEEP',
+            condition: {
+              packageNamePrefixes: [serviceId.toLowerCase()],
+              tagState: 'ANY',
+              newerCountThan: imageRetentionCount,
             },
-          ]
-        : undefined
+          },
+          {
+            id: 'delete-old-images',
+            action: 'DELETE',
+            condition: {
+              packageNamePrefixes: [serviceId.toLowerCase()],
+              tagState: 'ANY',
+            },
+          },
+        ]
+      : undefined
     const repository = new ArtifactRegistryRepository(this, this.id('repo'), {
       repositoryId: this.id('repo').toLowerCase(),
       format: 'DOCKER',
