@@ -192,6 +192,13 @@ export class CloudRunServiceConstructAlt<
       role: 'roles/storage.objectViewer',
     })
 
+    const deployerSaAdmin = new ProjectIamMember(this, this.id('deployer-sa-admin'), {
+      project: scope.projectId,
+      role: 'roles/iam.serviceAccountAdmin',
+      member: `serviceAccount:${envConfig.deployerSaEmail}`,
+      dependsOn: [iamBindingForDeployerBuilds],
+    })
+
     const deployerCanActAsCloudBuildSa = new ServiceAccountIamBinding(
       this,
       this.id('deployer-can-act-as-cloud-build-sa'),
@@ -199,6 +206,7 @@ export class CloudRunServiceConstructAlt<
         serviceAccountId: `projects/${scope.projectId}/serviceAccounts/${scope.projectNumber}@cloudbuild.gserviceaccount.com`,
         role: 'roles/iam.serviceAccountUser',
         members: [`serviceAccount:${envConfig.deployerSaEmail}`],
+        dependsOn: [deployerSaAdmin, cloudBuildServiceAccountBinding],
       },
     )
 
