@@ -83,7 +83,7 @@ export class AppStack extends BaseStack<AppStackConfig> {
       this.id('iam', 'deployer', 'editor'),
       {
         project: this.projectId,
-        role: 'roles/editor',
+        role: 'roles/owner',
         member: `serviceAccount:${envConfig.deployerSaEmail}`,
       },
     )
