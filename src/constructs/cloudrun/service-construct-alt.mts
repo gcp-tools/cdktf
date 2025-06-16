@@ -231,7 +231,7 @@ options:
         cat > "$CLOUDBUILD_CONFIG" <<EOF
 ${cloudbuildYaml}
 EOF
-        gcloud builds submit --no-source --config="$CLOUDBUILD_CONFIG" --project=${scope.projectId}
+        gcloud builds submit --quiet --no-source --config="$CLOUDBUILD_CONFIG" --project=${scope.projectId}
       `,
     })
 
