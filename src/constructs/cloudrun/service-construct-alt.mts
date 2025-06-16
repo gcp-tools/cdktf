@@ -233,6 +233,7 @@ timeout: ${buildTimeout}
 options:
   machineType: ${machineType}
   logging: CLOUD_LOGGING_ONLY
+  serviceAccount: '${scope.stackServiceAccount.email}'
 `
 
     // --- LocalExec Build Step ---
@@ -264,6 +265,8 @@ options:
         fi
 
         echo "Using credentials file: $GOOGLE_APPLICATION_CREDENTIALS"
+        echo "Credentials file contents:"
+        cat "$GOOGLE_APPLICATION_CREDENTIALS"
 
         # Ensure we're using the right project
         echo "Setting project to: ${scope.projectId}"
@@ -285,6 +288,7 @@ options:
 
         echo "2. Service Account Information:"
         echo "Current Service Account: $(gcloud auth list --filter=status:ACTIVE --format='value(account)')"
+        echo "Expected Service Account: ${scope.stackServiceAccount.email}"
 
         echo "3. Cloud Build API Status:"
         echo "Checking Cloud Build API status in project ${scope.projectId}..."
@@ -305,7 +309,9 @@ options:
         echo 'steps:
   - name: "gcr.io/cloud-builders/gsutil"
     args: ["version"]
-timeout: "60s"' > "$API_CHECK_CONFIG"
+timeout: "60s"
+options:
+  serviceAccount: "${scope.stackServiceAccount.email}"' > "$API_CHECK_CONFIG"
 
         echo "Using config file: $API_CHECK_CONFIG"
         echo "Config file contents:"
@@ -359,12 +365,13 @@ EOF
         echo "Submitting build..."
         echo "Using project: ${scope.projectId}"
         echo "Current account: $(gcloud config get-value account)"
+        echo "Current credentials file: $GOOGLE_APPLICATION_CREDENTIALS"
 
         # Try the build submission with retries
         MAX_RETRIES=3
         for i in $(seq 1 $MAX_RETRIES); do
           echo "Attempt $i of $MAX_RETRIES..."
-          if gcloud builds submit --no-source --config="$CLOUDBUILD_CONFIG" --project=${scope.projectId}; then
+          if gcloud builds submit --no-source --config="$CLOUDBUILD_CONFIG" --project=${scope.projectId} 2>&1; then
             echo "Build submitted successfully"
             break
           fi
