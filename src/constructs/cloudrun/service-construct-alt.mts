@@ -166,6 +166,13 @@ export class CloudRunServiceConstructAlt<
       role: 'roles/storage.objectViewer',
     })
 
+    // Grant the custom Cloud Build service account permission to write logs.
+    new ProjectIamMember(this, this.id('cloudbuild-logs-writer'), {
+      project: scope.projectId,
+      role: 'roles/logging.logWriter',
+      member: buildServiceAccount.member,
+    })
+
     const deployerBinding = new ServiceAccountIamBinding(
       this,
       this.id('deployer-sa-user'),
