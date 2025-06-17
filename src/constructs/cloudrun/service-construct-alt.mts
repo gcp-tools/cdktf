@@ -248,16 +248,11 @@ options:
         echo "Ensuring Cloud Build API is enabled for project ${scope.projectId}..."
         gcloud services enable --quiet cloudbuild.googleapis.com --project=${scope.projectId}
 
-        # Wait until the Cloud Build API is fully enabled (max ~2 minutes)
-        for i in {1..24}; do
-          if gcloud services list --enabled --project=${scope.projectId} \
-            --filter="cloudbuild.googleapis.com" --format="value(config.name)" | grep -q .; then
-            echo "Cloud Build API is enabled."
-            break
-          fi
-          echo "Waiting for Cloud Build API enablement to propagate..."
-          sleep 5
-        done
+        # Wait a fixed 60 seconds for the API enablement to propagate to all
+        # Google Cloud systems. Polling the Service Usage API is not enough,
+        # as the Cloud Build backend may learn of the enablement later.
+        echo "Waiting 60s for Cloud Build API to become fully available..."
+        sleep 60
 
         echo "Submitting build to project ${scope.projectId}..."
 

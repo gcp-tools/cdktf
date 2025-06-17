@@ -38,9 +38,6 @@ const appProjectApis = [
 ]
 
 export class AppProjectStack extends BaseProjectStack {
-
-  public deployerEditorBinding: ProjectIamMember
-
   constructor(scope: App, config: ProjectStackConfig = { apis: [] }) {
     super(scope, 'app', {
       apis: [...appProjectApis, ...config.apis],
@@ -57,12 +54,22 @@ export class AppProjectStack extends BaseProjectStack {
       })
     }
 
-    this.deployerEditorBinding = new ProjectIamMember(
+    new ProjectIamMember(
       this,
       this.id('iam', 'deployer', 'editor'),
       {
         project: this.projectId,
-        role: 'roles/editor',
+        role: 'roles/serviceusage.serviceUsageAdmin',
+        member: `serviceAccount:${envConfig.deployerSaEmail}`,
+      },
+    )
+
+    new ProjectIamMember(
+      this,
+      this.id('iam', 'deployer', 'builder'),
+      {
+        project: this.projectId,
+        role: 'roles/cloudbuild.builds.builder',
         member: `serviceAccount:${envConfig.deployerSaEmail}`,
       },
     )
