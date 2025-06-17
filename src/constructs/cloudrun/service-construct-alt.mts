@@ -152,7 +152,7 @@ export class CloudRunServiceConstructAlt<
         project: scope.projectId,
         role: 'roles/artifactregistry.writer',
         member: `serviceAccount:${scope.projectNumber}@cloudbuild.gserviceaccount.com`,
-        dependsOn: [repository, scope.deployerEditorBinding],
+        dependsOn: [repository],
       },
     )
 

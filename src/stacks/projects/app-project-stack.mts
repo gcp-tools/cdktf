@@ -11,7 +11,7 @@
  * new AppProjectStack(app, 'my-app-project')
  * ```
  */
-
+import { ProjectIamMember } from '@cdktf/provider-google/lib/project-iam-member/index.js'
 import { StorageBucket } from '@cdktf/provider-google/lib/storage-bucket/index.js'
 import type { App } from 'cdktf'
 import { envConfig } from '../../utils/env.mjs'
@@ -29,7 +29,6 @@ const appProjectApis = [
   'compute',
   'eventarc',
   'eventarcpublishing',
-  'firestore',
   'iam',
   'logging',
   'pubsub',
@@ -39,6 +38,9 @@ const appProjectApis = [
 ]
 
 export class AppProjectStack extends BaseProjectStack {
+
+  public deployerEditorBinding: ProjectIamMember
+
   constructor(scope: App, config: ProjectStackConfig = { apis: [] }) {
     super(scope, 'app', {
       apis: [...appProjectApis, ...config.apis],
@@ -54,5 +56,16 @@ export class AppProjectStack extends BaseProjectStack {
         uniformBucketLevelAccess: true,
       })
     }
+
+    this.deployerEditorBinding = new ProjectIamMember(
+      this,
+      this.id('iam', 'deployer', 'editor'),
+      {
+        project: this.projectId,
+        role: 'roles/owner',
+        member: `serviceAccount:${envConfig.deployerSaEmail}`,
+      },
+    )
+
   }
 }
