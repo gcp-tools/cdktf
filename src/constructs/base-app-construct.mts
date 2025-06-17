@@ -17,4 +17,8 @@ export class BaseAppConstruct<T> extends Construct {
   id(...tokens: string[]) {
     return this.constructScope.id(this.constructId, ...tokens)
   }
+
+  shortName(...tokens: string[]) {
+    return `${this.constructScope.stackConfig.user}-${this.constructScope.stackId}${tokens.length ? `-${tokens.join('-')}` : ''}`
+  }
 }

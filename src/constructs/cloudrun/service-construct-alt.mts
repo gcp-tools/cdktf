@@ -86,7 +86,7 @@ export class CloudRunServiceConstructAlt<
 
     // --- Service Account for the Build ---
     const buildServiceAccount = new ServiceAccount(this, this.id('build-sa'), {
-      accountId: this.id('build-sa'),
+      accountId: this.shortName('build-sa'),
       displayName: 'Cloud Build SA',
       project: scope.projectId,
     })
@@ -180,7 +180,7 @@ export class CloudRunServiceConstructAlt<
     // This is the key dependency to prevent the build from running too early.
     const deployerActAsBuildSa = new ServiceAccountIamMember(
       this,
-      this.id('deployer-act-as-build-sa'),
+      this.id('deployer-act-as-bld-sa'),
       {
         serviceAccountId: buildServiceAccount.id,
         role: 'roles/iam.serviceAccountUser',
