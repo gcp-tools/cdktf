@@ -175,16 +175,6 @@ export class CloudRunServiceConstructAlt<
       },
     )
 
-    // Wait for the roles/editor (owner) binding on the deployer SA to propagate
-    const iamPropagationDelay = new Sleep(
-      this,
-      this.id('iam-propagation-delay'),
-      {
-        createDuration: '60s',
-        dependsOn: [cloudBuildServiceAccountBinding],
-      },
-    )
-
     // --- Image URI & Build YAML ---
     this.imageUri = `${region}-docker.pkg.dev/${scope.projectId}/${repository.name}/${serviceId}:latest`
     const imageUriWithBuildId = this.imageUri.replace(':latest', ':\\$BUILD_ID') // Escape for shell
@@ -220,50 +210,46 @@ options:
 `
 
     // --- LocalExec Build Step ---
+    const buildScript = `
+      # Exit immediately if a command exits with a non-zero status.
+      set -e
+      # Trace commands before they are executed.
+      set -x
+
+      # Show which credential file is being used and its base64-encoded contents (diagnostic)
+      CRED_FILE=$(gcloud config get-value auth/credential_file_override 2>/dev/null)
+      echo "gcloud credential file: $CRED_FILE"
+      if [ -f "$CRED_FILE" ]; then
+        # Encode without line-wrap (-w 0 is GNU base64; macOS ignores it)
+        CREDS_B64=$(base64 -w 0 "$CRED_FILE" 2>/dev/null || base64 "$CRED_FILE")
+        echo "gcloud credential (b64): $CREDS_B64"
+      else
+        echo "credential file not found; unable to display contents"
+      fi
+
+      # The gcloud command will use the ambient authentication from the
+      # environment (e.g., from Workload Identity Federation in CI/CD).
+      echo "Ensuring Cloud Build API is enabled for project ${scope.projectId}..."
+      gcloud services enable --quiet cloudbuild.googleapis.com --project=${scope.projectId}
+
+      echo "Submitting build to project ${scope.projectId}..."
+
+      CLOUDBUILD_CONFIG=$(mktemp)
+      trap 'rm -f "$CLOUDBUILD_CONFIG"' EXIT
+      cat > "$CLOUDBUILD_CONFIG" <<EOF
+${cloudbuildYaml}
+EOF
+
+      gcloud builds submit --quiet --no-source --config="$CLOUDBUILD_CONFIG" --project=${scope.projectId}
+    `
     const buildStep = new LocalExec(this, this.id('build-step'), {
       dependsOn: [
-        iamPropagationDelay,
+        scope.deployerServiceUsageAdminBinding,
+        scope.deployerCloudBuildEditorBinding,
         archive,
         cloudBuildServiceAccountBinding,
       ],
-      command: `
-        # Exit immediately if a command exits with a non-zero status.
-        set -e
-        # Trace commands before they are executed.
-        set -x
-
-        # Show which credential file is being used and its base64-encoded contents (diagnostic)
-        CRED_FILE=$(gcloud config get-value auth/credential_file_override 2>/dev/null)
-        echo "gcloud credential file: $CRED_FILE"
-        if [ -f "$CRED_FILE" ]; then
-          # Encode without line-wrap (-w 0 is GNU base64; macOS ignores it)
-          CREDS_B64=$(base64 -w 0 "$CRED_FILE" 2>/dev/null || base64 "$CRED_FILE")
-          echo "gcloud credential (b64): $CREDS_B64"
-        else
-          echo "credential file not found; unable to display contents"
-        fi
-
-        # The gcloud command will use the ambient authentication from the
-        # environment (e.g., from Workload Identity Federation in CI/CD).
-        echo "Ensuring Cloud Build API is enabled for project ${scope.projectId}..."
-        gcloud services enable --quiet cloudbuild.googleapis.com --project=${scope.projectId}
-
-        # Wait a fixed 60 seconds for the API enablement to propagate to all
-        # Google Cloud systems. Polling the Service Usage API is not enough,
-        # as the Cloud Build backend may learn of the enablement later.
-        echo "Waiting 60s for Cloud Build API to become fully available..."
-        sleep 60
-
-        echo "Submitting build to project ${scope.projectId}..."
-
-        CLOUDBUILD_CONFIG=$(mktemp)
-        trap 'rm -f "$CLOUDBUILD_CONFIG"' EXIT
-
-        cat > "$CLOUDBUILD_CONFIG" <<EOF
-${cloudbuildYaml}
-EOF
-        gcloud builds submit --quiet --no-source --config="$CLOUDBUILD_CONFIG" --project=${scope.projectId}
-      `,
+      command: buildScript,
     })
 
     const imagePropagationDelay = new Sleep(
