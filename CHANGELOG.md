@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.11.6](https://github.com/gcp-tools/cdktf/compare/v1.11.5...v1.11.6) (2025-06-17)
+
+### Bug Fixes
+
+* updates cloudrun service construct ([d061e75](https://github.com/gcp-tools/cdktf/commit/d061e756cf29adfed50193fc2902eb980f6199d7))
+
 ## [1.11.5](https://github.com/gcp-tools/cdktf/compare/v1.11.4...v1.11.5) (2025-06-17)
 
 ### Bug Fixes
