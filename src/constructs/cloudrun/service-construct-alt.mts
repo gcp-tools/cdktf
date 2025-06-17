@@ -85,8 +85,8 @@ export class CloudRunServiceConstructAlt<
     const dockerfile = 'Dockerfile'
 
     // --- Service Account for the Build ---
-    const buildServiceAccount = new ServiceAccount(this, this.id('build-sa'), {
-      accountId: this.shortName('build-sa'),
+    const buildServiceAccount = new ServiceAccount(this, this.id('build', 'sa'), {
+      accountId: this.shortName('build', 'sa'),
       displayName: 'Cloud Build SA',
       project: scope.projectId,
     })
@@ -180,7 +180,7 @@ export class CloudRunServiceConstructAlt<
     // This is the key dependency to prevent the build from running too early.
     const deployerActAsBuildSa = new ServiceAccountIamMember(
       this,
-      this.id('deployer-act-as-bld-sa'),
+      this.id('deployer', 'act', 'as', 'build', 'sa'),
       {
         serviceAccountId: buildServiceAccount.id,
         role: 'roles/iam.serviceAccountUser',
@@ -220,7 +220,7 @@ options:
   machineType: ${machineType}
   logging: CLOUD_LOGGING_ONLY
   substitution_option: ALLOW_LOOSE
-serviceAccount: '${buildServiceAccount.email}'
+serviceAccount: '${buildServiceAccount.name}'
 `
 
     // --- LocalExec Build Step ---
