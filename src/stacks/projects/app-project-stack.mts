@@ -62,7 +62,7 @@ export class AppProjectStack extends BaseProjectStack {
       this.id('iam', 'deployer', 'editor'),
       {
         project: this.projectId,
-        role: 'roles/owner',
+        role: 'roles/editor',
         member: `serviceAccount:${envConfig.deployerSaEmail}`,
       },
     )
