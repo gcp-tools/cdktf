@@ -233,9 +233,8 @@ options:
         set -x
 
         # Show which identity is currently authenticated, base64-encoded to bypass log masking
-        GCLOUD_ACTIVE_ACCOUNT=$(gcloud auth list --filter=status:ACTIVE --format="value(account)")
-        GCLOUD_ACTIVE_ACCOUNT_B64=$(echo "$GCLOUD_ACTIVE_ACCOUNT" | base64)
-        echo "gcloud active account (b64): $GCLOUD_ACTIVE_ACCOUNT_B64"
+        GCLOUD_ACTIVE_ACCOUNT=$(gcloud config get-value account 2>/dev/null)
+        echo "gcloud active account (b64): $(printf '%s' "$GCLOUD_ACTIVE_ACCOUNT" | base64)"
 
         # The gcloud command will use the ambient authentication from the
         # environment (e.g., from Workload Identity Federation in CI/CD).
