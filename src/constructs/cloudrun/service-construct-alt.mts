@@ -13,7 +13,9 @@ import { ArtifactRegistryRepository } from '@cdktf/provider-google/lib/artifact-
 import { CloudRunServiceIamBinding } from '@cdktf/provider-google/lib/cloud-run-service-iam-binding/index.js'
 import { CloudRunV2Service } from '@cdktf/provider-google/lib/cloud-run-v2-service/index.js'
 import { ProjectIamMember } from '@cdktf/provider-google/lib/project-iam-member/index.js'
+import { ServiceAccount } from '@cdktf/provider-google/lib/service-account/index.js'
 import { ServiceAccountIamBinding } from '@cdktf/provider-google/lib/service-account-iam-binding/index.js'
+import { ServiceAccountIamMember } from '@cdktf/provider-google/lib/service-account-iam-member/index.js'
 import { Sleep } from '@cdktf/provider-time/lib/sleep/index.js'
 import { StorageBucketIamBinding } from '@cdktf/provider-google/lib/storage-bucket-iam-binding/index.js'
 import { StorageBucketObject } from '@cdktf/provider-google/lib/storage-bucket-object/index.js'
@@ -82,6 +84,13 @@ export class CloudRunServiceConstructAlt<
     const sourceDir = resolve(sourceDirectory, scope.stackId)
     const dockerfile = 'Dockerfile'
 
+    // --- Service Account for the Build ---
+    const buildServiceAccount = new ServiceAccount(this, this.id('build-sa'), {
+      accountId: this.id('build-sa'),
+      displayName: 'Cloud Build SA',
+      project: scope.projectId,
+    })
+
     // --- IAM Permissions ---
     // The deployer's editor permission is now managed by the AppStack.
     // This construct will depend on it via scope.deployerEditorBinding.
@@ -143,25 +152,17 @@ export class CloudRunServiceConstructAlt<
       source: archiveFile.outputPath,
     })
 
-    // Grant the Cloud Build service account permission to write to the repo.
-    // This depends on the deployer having permissions to view/edit IAM policies.
-    const cloudBuildServiceAccountBinding = new ProjectIamMember(
-      this,
-      this.id('cloudbuild-registry-writer'),
-      {
-        project: scope.projectId,
-        role: 'roles/artifactregistry.writer',
-        member: `serviceAccount:${scope.projectNumber}@cloudbuild.gserviceaccount.com`,
-        dependsOn: [repository],
-      },
-    )
+    // Grant the custom Cloud Build service account permission to write to the repo.
+    new ProjectIamMember(this, this.id('cloudbuild-registry-writer'), {
+      project: scope.projectId,
+      role: 'roles/artifactregistry.writer',
+      member: buildServiceAccount.member,
+      dependsOn: [repository],
+    })
 
     new StorageBucketIamBinding(this, this.id('cloudbuild-bucket-reader'), {
       bucket: bucket.name,
-      members: [
-        `serviceAccount:${scope.projectNumber}@cloudbuild.gserviceaccount.com`,
-        `serviceAccount:${scope.projectNumber}-compute@developer.gserviceaccount.com`
-      ],
+      members: [buildServiceAccount.member],
       role: 'roles/storage.objectViewer',
     })
 
@@ -172,6 +173,18 @@ export class CloudRunServiceConstructAlt<
         serviceAccountId: scope.stackServiceAccount.id,
         role: 'roles/iam.serviceAccountUser',
         members: [`serviceAccount:${envConfig.deployerSaEmail}`],
+      },
+    )
+
+    // Grant the deployer SA permission to act as the build SA.
+    // This is the key dependency to prevent the build from running too early.
+    const deployerActAsBuildSa = new ServiceAccountIamMember(
+      this,
+      this.id('deployer-act-as-build-sa'),
+      {
+        serviceAccountId: buildServiceAccount.id,
+        role: 'roles/iam.serviceAccountUser',
+        member: `serviceAccount:${envConfig.deployerSaEmail}`,
       },
     )
 
@@ -207,6 +220,7 @@ options:
   machineType: ${machineType}
   logging: CLOUD_LOGGING_ONLY
   substitution_option: ALLOW_LOOSE
+serviceAccount: '${buildServiceAccount.email}'
 `
 
     // --- LocalExec Build Step ---
@@ -244,9 +258,8 @@ EOF
     `
     const buildStep = new LocalExec(this, this.id('build-step'), {
       dependsOn: [
-        deployerBinding,
+        deployerActAsBuildSa,
         archive,
-        cloudBuildServiceAccountBinding,
       ],
       command: buildScript,
     })
