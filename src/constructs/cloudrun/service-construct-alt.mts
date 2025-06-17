@@ -197,9 +197,18 @@ export class CloudRunServiceConstructAlt<
     const cloudbuildYaml = `
 steps:
   - name: 'gcr.io/cloud-builders/gsutil'
-    args: ['cp', 'gs://${bucket.name}/${archive.name}', '/workspace/source.zip']
-  - name: 'ubuntu'
-    args: ['unzip', '/workspace/source.zip', '-d', '/workspace/src']
+    args: [
+      'cp',
+      'gs://${bucket.name}/${archive.name}',
+      '/workspace/source.zip',
+    ]
+  - name: ubuntu
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        apt-get update && apt-get install -y unzip
+        unzip /workspace/source.zip -d /workspace
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
@@ -208,9 +217,8 @@ steps:
       - '-t'
       - '${imageUriWithBuildId}'
       - '-f'
-      - '/workspace/src/${dockerfile}'
-${buildArgsLines}
-      - '/workspace/src'
+      - '/workspace/${dockerfile}${buildArgsLines}'
+      - '/workspace'
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', '${this.imageUri}']
   - name: 'gcr.io/cloud-builders/docker'
@@ -222,6 +230,7 @@ options:
   substitution_option: ALLOW_LOOSE
 serviceAccount: '${buildServiceAccount.name}'
 `
+
 
     // --- LocalExec Build Step ---
     const buildScript = `
