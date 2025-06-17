@@ -23,7 +23,6 @@ import { LocalExec } from 'cdktf-local-exec'
 import type { AppStack } from '../../stacks/app-stack.mjs'
 import { envConfig } from '../../utils/env.mjs'
 import { BaseAppConstruct } from '../base-app-construct.mjs'
-import { DataGoogleProjectIamPolicy } from '@cdktf/provider-google/lib/data-google-project-iam-policy/index.js'
 
 
 const sourceDirectory = resolve(cwd(), '..', '..', 'services')
@@ -176,17 +175,6 @@ export class CloudRunServiceConstructAlt<
       },
     )
 
-    // Data source to read the project's IAM policy. This creates an implicit
-    // dependency on the IAM policies being propagated.
-    const projectIamPolicy = new DataGoogleProjectIamPolicy(
-      this,
-      this.id('project-iam-policy'),
-      {
-        project: scope.projectId,
-        dependsOn: [deployerBinding],
-      },
-    )
-
     // --- Image URI & Build YAML ---
     this.imageUri = `${region}-docker.pkg.dev/${scope.projectId}/${repository.name}/${serviceId}:latest`
     const imageUriWithBuildId = this.imageUri.replace(':latest', ':\\$BUILD_ID') // Escape for shell
@@ -252,11 +240,11 @@ options:
 ${cloudbuildYaml}
 EOF
 
-      gcloud builds submit --quiet --no-source --config="$CLOUDBUILD_CONFIG" --project=${scope.projectId}
+      gcloud builds submit --quiet --no-source --config="$CLOUDBUILD_CONFIG" --project=${scope.projectId} --billing-project=${scope.projectId}
     `
     const buildStep = new LocalExec(this, this.id('build-step'), {
       dependsOn: [
-        projectIamPolicy,
+        deployerBinding,
         archive,
         cloudBuildServiceAccountBinding,
       ],
