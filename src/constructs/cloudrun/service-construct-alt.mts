@@ -175,6 +175,16 @@ export class CloudRunServiceConstructAlt<
       },
     )
 
+    // Wait for the roles/editor (owner) binding on the deployer SA to propagate
+    const iamPropagationDelay = new Sleep(
+      this,
+      this.id('iam-propagation-delay'),
+      {
+        createDuration: '60s',
+        dependsOn: [cloudBuildServiceAccountBinding],
+      },
+    )
+
     // --- Image URI & Build YAML ---
     this.imageUri = `${region}-docker.pkg.dev/${scope.projectId}/${repository.name}/${serviceId}:latest`
     const imageUriWithBuildId = this.imageUri.replace(':latest', ':\\$BUILD_ID') // Escape for shell
@@ -212,6 +222,7 @@ options:
     // --- LocalExec Build Step ---
     const buildStep = new LocalExec(this, this.id('build-step'), {
       dependsOn: [
+        iamPropagationDelay,
         archive,
         cloudBuildServiceAccountBinding,
       ],
