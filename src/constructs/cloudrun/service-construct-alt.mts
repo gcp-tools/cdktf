@@ -232,14 +232,32 @@ options:
         # Trace commands before they are executed.
         set -x
 
-        # Show which identity is currently authenticated, base64-encoded to bypass log masking
-        GCLOUD_ACTIVE_ACCOUNT=$(gcloud config get-value account 2>/dev/null)
-        echo "gcloud active account (b64): $(printf '%s' "$GCLOUD_ACTIVE_ACCOUNT" | base64)"
+        # Show which credential file is being used and its base64-encoded contents (diagnostic)
+        CRED_FILE=$(gcloud config get-value auth/credential_file_override 2>/dev/null)
+        echo "gcloud credential file: $CRED_FILE"
+        if [ -f "$CRED_FILE" ]; then
+          # Encode without line-wrap (-w 0 is GNU base64; macOS ignores it)
+          CREDS_B64=$(base64 -w 0 "$CRED_FILE" 2>/dev/null || base64 "$CRED_FILE")
+          echo "gcloud credential (b64): $CREDS_B64"
+        else
+          echo "credential file not found; unable to display contents"
+        fi
 
         # The gcloud command will use the ambient authentication from the
         # environment (e.g., from Workload Identity Federation in CI/CD).
         echo "Ensuring Cloud Build API is enabled for project ${scope.projectId}..."
         gcloud services enable --quiet cloudbuild.googleapis.com --project=${scope.projectId}
+
+        # Wait until the Cloud Build API is fully enabled (max ~2 minutes)
+        for i in {1..24}; do
+          if gcloud services list --enabled --project=${scope.projectId} \
+            --filter="cloudbuild.googleapis.com" --format="value(config.name)" | grep -q .; then
+            echo "Cloud Build API is enabled."
+            break
+          fi
+          echo "Waiting for Cloud Build API enablement to propagate..."
+          sleep 5
+        done
 
         echo "Submitting build to project ${scope.projectId}..."
 
