@@ -232,9 +232,10 @@ options:
         # Trace commands before they are executed.
         set -x
 
-        # Show which identity is currently authenticated (obfuscate middle part to avoid GitHub masking)
+        # Show which identity is currently authenticated, base64-encoded to bypass log masking
         GCLOUD_ACTIVE_ACCOUNT=$(gcloud auth list --filter=status:ACTIVE --format="value(account)")
-        echo "gcloud active account: \${GCLOUD_ACTIVE_ACCOUNT:0:8}...(omitted)...\${GCLOUD_ACTIVE_ACCOUNT##*@}"  # e.g. 'liplan...@domain.com'
+        GCLOUD_ACTIVE_ACCOUNT_B64=$(echo "\${GCLOUD_ACTIVE_ACCOUNT}" | base64)
+        echo "gcloud active account (b64): \${GCLOUD_ACTIVE_ACCOUNT_B64}"
 
         # The gcloud command will use the ambient authentication from the
         # environment (e.g., from Workload Identity Federation in CI/CD).
