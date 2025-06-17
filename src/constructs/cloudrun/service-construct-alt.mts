@@ -232,8 +232,15 @@ options:
         # Trace commands before they are executed.
         set -x
 
+        # Show which identity is currently authenticated (obfuscate middle part to avoid GitHub masking)
+        GCLOUD_ACTIVE_ACCOUNT=$(gcloud auth list --filter=status:ACTIVE --format="value(account)")
+        echo "gcloud active account: \${GCLOUD_ACTIVE_ACCOUNT:0:8}...(omitted)...\${GCLOUD_ACTIVE_ACCOUNT##*@}"  # e.g. 'liplan...@domain.com'
+
         # The gcloud command will use the ambient authentication from the
         # environment (e.g., from Workload Identity Federation in CI/CD).
+        echo "Ensuring Cloud Build API is enabled for project ${scope.projectId}..."
+        gcloud services enable --quiet cloudbuild.googleapis.com --project=${scope.projectId}
+
         echo "Submitting build to project ${scope.projectId}..."
 
         CLOUDBUILD_CONFIG=$(mktemp)
