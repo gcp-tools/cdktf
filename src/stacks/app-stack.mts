@@ -26,8 +26,6 @@ export class AppStack extends BaseStack<AppStackConfig> {
   public stackServiceAccount: ServiceAccount
   public vpcConnectorId: string
   public vpcProjectId: string
-  public deployerCloudBuildEditorBinding: ProjectIamMember
-  public deployerServiceUsageAdminBinding: ProjectIamMember
 
   protected firestoreDatabaseProjectId!: string
   protected firestoreDatabaseName!: string
@@ -78,27 +76,6 @@ export class AppStack extends BaseStack<AppStackConfig> {
       description: `A generated service account for project '${this.projectId}'`,
       project: this.projectId,
     })
-
-    const deployerServiceAccount = `serviceAccount:${envConfig.deployerSaEmail}`
-    this.deployerServiceUsageAdminBinding = new ProjectIamMember(
-      this,
-      this.id('iam', 'deployer', 'service', 'usage', 'admin'),
-      {
-        member: deployerServiceAccount,
-        project: this.projectId,
-        role: 'roles/serviceusage.serviceUsageAdmin',
-      },
-    )
-
-    this.deployerCloudBuildEditorBinding = new ProjectIamMember(
-      this,
-      this.id('iam', 'deployer', 'cloud', 'build', 'editor'),
-      {
-        member: deployerServiceAccount,
-        project: this.projectId,
-        role: 'roles/cloudbuild.builds.editor',
-      },
-    )
 
     const serviceAccount = `serviceAccount:${this.stackServiceAccount.email}`
 
