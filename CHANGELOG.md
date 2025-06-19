@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.12.3](https://github.com/gcp-tools/cdktf/compare/v1.12.2...v1.12.3) (2025-06-19)
+
+### Bug Fixes
+
+* applies hash to build and image to trigger build and deployment ([8d659ae](https://github.com/gcp-tools/cdktf/commit/8d659ae660c69ac3176754295ddac7bebc266410))
+
+### Chores
+
+* adds file ([ec20055](https://github.com/gcp-tools/cdktf/commit/ec2005540f9e6250cfbb13fb4b3dc187e2193506))
+
 ## [1.12.2](https://github.com/gcp-tools/cdktf/compare/v1.12.1...v1.12.2) (2025-06-19)
 
 ### Bug Fixes
