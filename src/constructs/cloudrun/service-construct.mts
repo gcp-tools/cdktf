@@ -24,6 +24,7 @@ import type { ITerraformDependable } from 'cdktf'
 import { LocalExec } from 'cdktf-local-exec'
 import type { AppStack } from '../../stacks/app-stack.mjs'
 import { envConfig } from '../../utils/env.mjs'
+import { computeSourceHash } from '../../utils/hash.mjs'
 import { BaseAppConstruct } from '../base-app-construct.mjs'
 
 
@@ -85,34 +86,8 @@ export class CloudRunServiceConstruct<
     const sourceDir = resolve(sourceDirectory, scope.stackId)
     const dockerfile = 'Dockerfile'
 
-    // --- Source Hash Computation ---
-    // Compute a hash of all source files to detect changes automatically
-    // Uses include-first approach to automatically detect any source files
-    const sourceHashStep = new LocalExec(this, this.id('source-hash'), {
-      command: `
-        cd "${sourceDir}" && \
-        find . -type f \
-          ! -path "./node_modules/*" \
-          ! -path "./dist/*" \
-          ! -path "./build/*" \
-          ! -path "./target/*" \
-          ! -path "./.git/*" \
-          ! -path "./.terraform/*" \
-          ! -path "./.cdktf/*" \
-          ! -path "./coverage/*" \
-          ! -path "./.nyc_output/*" \
-          ! -path "./.next/*" \
-          ! -path "./.nuxt/*" \
-          ! -path "./.cache/*" \
-          ! -path "./tmp/*" \
-          ! -path "./temp/*" \
-          ! -path "./*.log" \
-          ! -name "*.log" \
-          ! -name ".DS_Store" \
-          ! -name "Thumbs.db" \
-        | sort | md5sum | cut -d' ' -f1
-      `,
-    })
+    // --- Source Hash Computation (at synthesis time) ---
+    const sourceHash = computeSourceHash(sourceDir)
 
     // --- Service Account for the Build ---
     const buildServiceAccount = new ServiceAccount(this, this.id('build', 'sa'), {
@@ -169,16 +144,14 @@ export class CloudRunServiceConstruct<
         '.cdktf.out',
         'stacks',
         scope.projectId,
-        `${serviceId}-${sourceHashStep.id}.zip`,
+        `${serviceId}-${sourceHash}.zip`,
       ),
-      dependsOn: [sourceHashStep],
     })
 
     const archive = new StorageBucketObject(this, this.id('archive'), {
       bucket: bucket.name,
-      name: archiveFile.outputMd5,
+      name: `${sourceHash}.zip`,
       source: archiveFile.outputPath,
-      dependsOn: [archiveFile],
     })
 
     // Grant the custom Cloud Build service account permission to write to the repo.
@@ -225,8 +198,8 @@ export class CloudRunServiceConstruct<
     )
 
     // --- Image URI & Build YAML ---
-    this.imageUri = `${region}-docker.pkg.dev/${scope.projectId}/${repository.name}/${serviceId}:latest`
-    const imageUriWithBuildId = this.imageUri.replace(':latest', ':\\$BUILD_ID') // Escape for shell
+    this.imageUri = `${region}-docker.pkg.dev/${scope.projectId}/${repository.name}/${serviceId}:${sourceHash}`
+    const imageUriWithBuildId = `${region}-docker.pkg.dev/${scope.projectId}/${repository.name}/${serviceId}:\$BUILD_ID`
     const buildArgsLines = Object.entries(buildArgs)
       .map(([key, value]) => `      - '--build-arg=${key}=${value}'`)
       .join('\n')
@@ -289,13 +262,8 @@ EOF
       dependsOn: [
         deployerActAsBuildSa,
         archive,
-        sourceHashStep,
       ],
       command: buildScript,
-      triggers: {
-        archive_name: archive.name,
-        source_hash: sourceHashStep.id,
-      },
     })
 
     const imagePropagationDelay = new Sleep(
