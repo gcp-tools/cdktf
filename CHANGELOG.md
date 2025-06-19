@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.12.0](https://github.com/gcp-tools/cdktf/compare/v1.11.8...v1.12.0) (2025-06-19)
+
+### Features
+
+* allows service deletion ([ac95607](https://github.com/gcp-tools/cdktf/commit/ac9560763b8fba82a9d1e1f83677a2515bb74054))
+
 ## [1.11.8](https://github.com/gcp-tools/cdktf/compare/v1.11.7...v1.11.8) (2025-06-17)
 
 ### Bug Fixes
