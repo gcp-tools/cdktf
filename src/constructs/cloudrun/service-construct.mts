@@ -226,7 +226,7 @@ export class CloudRunServiceConstruct<
 
     // --- Image URI & Build YAML (Using Archive Hash) ---
     const imageName = `${region}-docker.pkg.dev/${scope.projectId}/${repository.name}/${serviceId}`
-    this.imageUri = `${imageName}:${sourceHashStep.id}`
+    this.imageUri = `${imageName}:${archiveFile.outputMd5}`
 
     const buildArgsLines = Object.entries(buildArgs)
       .map(([key, value]) => `      - '--build-arg=${key}=${value}'`)
@@ -284,7 +284,7 @@ EOF
       dependsOn: [
         deployerActAsBuildSa,
         archive,
-        sourceHashStep,
+        archiveFile,
       ],
       command: buildScript,
     })
