@@ -176,7 +176,7 @@ export class CloudRunServiceConstruct<
 
     const archive = new StorageBucketObject(this, this.id('archive'), {
       bucket: bucket.name,
-      name: archiveFile.outputMd5,
+      name: `${archiveFile.outputMd5}-${sourceHashStep.id}`,
       source: archiveFile.outputPath,
       dependsOn: [archiveFile],
     })
