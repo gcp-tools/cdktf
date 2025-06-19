@@ -292,6 +292,10 @@ EOF
         sourceHashStep,
       ],
       command: buildScript,
+      triggers: {
+        archive_name: archive.name,
+        source_hash: sourceHashStep.id,
+      },
     })
 
     const imagePropagationDelay = new Sleep(
