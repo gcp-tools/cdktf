@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.12.1](https://github.com/gcp-tools/cdktf/compare/v1.12.0...v1.12.1) (2025-06-19)
+
+### Bug Fixes
+
+* adds source code hashing to trigger build on change ([ffeec60](https://github.com/gcp-tools/cdktf/commit/ffeec60e7dca2a0e3abd43c14d48f7069b164b79))
+
+### Chores
+
+* removes unused file declaration ([8cded7c](https://github.com/gcp-tools/cdktf/commit/8cded7cc0d3e3b66d52168c0f0306762f404dd81))
+
 ## [1.12.0](https://github.com/gcp-tools/cdktf/compare/v1.11.8...v1.12.0) (2025-06-19)
 
 ### Features
