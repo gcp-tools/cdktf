@@ -1,51 +1,11 @@
 /**
- * CloudRunServiceConstruct - Deploy containerized applications to Cloud Run
+ * CloudRunServiceConstructAlt - An alternative, robust implementation for
+ * deploying containerized applications to Cloud Run.
  *
- * This construct provides infrastructure for building and deploying containerized
- * applications to Google Cloud Run from a conventional source code directory
- * (`../services/{stack-id}`). It includes:
- * - Source code packaging and upload to Cloud Storage
- * - A dedicated Artifact Registry repository for each service's container images
- * - Automated container builds using Cloud Build
- * - Cloud Run service deployment with proper IAM and service identity
- * - Automatic integration with the stack's VPC connector for private networking
- *
- * @example
- * // Deploy a production-ready web application with sensible defaults
- * new cloudrun.CloudRunServiceConstruct(this, 'web-app', {
- *   region: 'us-central1',
- *   buildConfig: {
- *     machineType: 'E2_HIGHCPU_8', // Override default
- *   },
- *   serviceConfig: {
- *     environmentVariables: {
- *       NODE_ENV: 'production',
- *     },
- *     minScale: 1, // Keep one instance warm to prevent cold starts
- *     grantInvokerPermissions: ['serviceAccount:another-service@...'],
- *   },
- * })
- *
- * @example
- * // Deploy an API with custom resource limits
- * new cloudrun.CloudRunServiceConstruct(this, 'api-service', {
- *   region: 'us-central1',
- *   buildConfig: {},
- *   serviceConfig: {
- *     containerPort: 8080,
- *     cpu: '2000m', // 2 vCPU
- *     memory: '1Gi',
- *   },
- * })
- *
- * @example
- * // Access the deployed service URL
- * const serviceUrl = webApp.service.status.get(0).url
- *
- * @requires Dockerfile - Your source directory must contain a Dockerfile
- * @requires gcloud CLI - Must be authenticated and configured on deployment machine
+ * This construct is designed to be highly reliable in CI/CD environments.
+ * It declaratively enables required APIs and includes a resilient build
+ * script that handles the "eventual consistency" of cloud provider APIs.
  */
-
 import { resolve } from 'node:path'
 import { cwd } from 'node:process'
 import { DataArchiveFile } from '@cdktf/provider-archive/lib/data-archive-file/index.js'
@@ -53,33 +13,29 @@ import { ArtifactRegistryRepository } from '@cdktf/provider-google/lib/artifact-
 import { CloudRunServiceIamBinding } from '@cdktf/provider-google/lib/cloud-run-service-iam-binding/index.js'
 import { CloudRunV2Service } from '@cdktf/provider-google/lib/cloud-run-v2-service/index.js'
 import { ProjectIamMember } from '@cdktf/provider-google/lib/project-iam-member/index.js'
+import { ServiceAccount } from '@cdktf/provider-google/lib/service-account/index.js'
 import { ServiceAccountIamBinding } from '@cdktf/provider-google/lib/service-account-iam-binding/index.js'
+import { ServiceAccountIamMember } from '@cdktf/provider-google/lib/service-account-iam-member/index.js'
+import { Sleep } from '@cdktf/provider-time/lib/sleep/index.js'
 import { StorageBucketIamBinding } from '@cdktf/provider-google/lib/storage-bucket-iam-binding/index.js'
 import { StorageBucketObject } from '@cdktf/provider-google/lib/storage-bucket-object/index.js'
 import { StorageBucket } from '@cdktf/provider-google/lib/storage-bucket/index.js'
-import { File } from '@cdktf/provider-local/lib/file/index.js'
 import type { ITerraformDependable } from 'cdktf'
 import { LocalExec } from 'cdktf-local-exec'
 import type { AppStack } from '../../stacks/app-stack.mjs'
 import { envConfig } from '../../utils/env.mjs'
 import { BaseAppConstruct } from '../base-app-construct.mjs'
 
+
 const sourceDirectory = resolve(cwd(), '..', '..', 'services')
 
 export type CloudRunServiceConstructConfig = {
-  // Build configuration for local source code
   buildConfig: {
     buildArgs?: Record<string, string>
     timeout?: string
-    // The Cloud Build machine type. Defaults to a smallish machine to keep costs down
-    // Override to a larger machine (e.g., 'E2_HIGHCPU_8') for production.
     machineType?: string
   }
-
-  // Cloud Run configuration
   region: string
-
-  // Service configuration
   serviceConfig: {
     dependsOn?: ITerraformDependable[]
     grantInvokerPermissions?: string[]
@@ -98,14 +54,6 @@ export type CloudRunServiceConstructConfig = {
 export class CloudRunServiceConstruct<
   T extends CloudRunServiceConstructConfig,
 > extends BaseAppConstruct<CloudRunServiceConstructConfig> {
-  protected repository: ArtifactRegistryRepository
-  protected bucket: StorageBucket
-  protected archive: StorageBucketObject
-  protected archiveFile: DataArchiveFile
-  protected buildConfigFile: File
-  protected buildStep: LocalExec
-  protected cloudBuildServiceAccountBinding: ProjectIamMember
-  protected invoker: CloudRunServiceIamBinding
   public service: CloudRunV2Service
   public imageUri: string
 
@@ -113,13 +61,11 @@ export class CloudRunServiceConstruct<
     super(scope, id, config)
 
     const { buildConfig, region, serviceConfig } = config
-
     const {
-      timeout: buildTimeout = '600s',
+      timeout: buildTimeout = '1200s',
       machineType = 'E2_MEDIUM',
       buildArgs = {},
     } = buildConfig
-
     const {
       dependsOn = [],
       grantInvokerPermissions = [],
@@ -135,153 +81,97 @@ export class CloudRunServiceConstruct<
     } = serviceConfig
 
     const serviceId = this.id('service')
-
-    // Determine source directory based on convention
     const sourceDir = resolve(sourceDirectory, scope.stackId)
     const dockerfile = 'Dockerfile'
 
-    // Create Artifact Registry repository
-    const repositoryId = this.id('repo')
-    const cleanupPolicies =
-      imageRetentionCount > 0
-        ? [
-            {
-              id: 'keep-most-recent',
-              action: 'KEEP',
-              condition: {
-                packageNamePrefixes: [serviceId.toLowerCase()],
-                tagState: 'ANY',
-                newerCountThan: imageRetentionCount,
-              },
-            },
-            {
-              id: 'delete-old-images',
-              action: 'DELETE',
-            },
-          ]
-        : undefined
+    // --- Service Account for the Build ---
+    const buildServiceAccount = new ServiceAccount(this, this.id('build', 'sa'), {
+      accountId: this.shortName('build', 'sa'),
+      displayName: 'Cloud Build SA',
+      project: scope.projectId,
+    })
 
-    this.repository = new ArtifactRegistryRepository(this, repositoryId, {
-      repositoryId: repositoryId.toLowerCase(),
+    // --- Artifact Registry Repository ---
+    const cleanupPolicies =
+    imageRetentionCount > 0
+      ? [
+          {
+            id: 'keep-most-recent',
+            action: 'KEEP',
+            condition: {
+              packageNamePrefixes: [serviceId.toLowerCase()],
+              tagState: 'ANY',
+              newerCountThan: imageRetentionCount,
+            },
+          },
+          {
+            id: 'delete-old-images',
+            action: 'DELETE',
+            condition: {
+              packageNamePrefixes: [serviceId.toLowerCase()],
+              tagState: 'ANY',
+            },
+          },
+        ]
+      : undefined
+    const repository = new ArtifactRegistryRepository(this, this.id('repo'), {
+      repositoryId: this.id('repo').toLowerCase(),
       format: 'DOCKER',
       location: region,
       project: scope.projectId,
-      description: `Container repository for ${serviceId}`,
-      dependsOn,
       cleanupPolicies,
     })
 
-    // Create storage bucket for source code
-    const bucketId = this.id('source', 'bucket')
-    this.bucket = new StorageBucket(this, bucketId, {
-      dependsOn: [scope.stackServiceAccount, this.repository, ...dependsOn],
-      forceDestroy: true,
-      location: region,
+    // --- Source Code Storage ---
+    const bucketId = this.id('source-bucket')
+    const bucket = new StorageBucket(this, bucketId, {
       name: bucketId,
+      location: region,
       project: scope.projectId,
+      forceDestroy: true,
       uniformBucketLevelAccess: true,
-      versioning: {
-        enabled: true,
-      },
     })
-
-    // Grant service account access to bucket
-    new StorageBucketIamBinding(this, this.id('bucket', 'iam', 'admin'), {
-      bucket: this.bucket.name,
-      dependsOn: [this.bucket],
-      members: [`serviceAccount:${scope.stackServiceAccount.email}`],
-      role: 'roles/storage.admin',
-    })
-
-    // Package source code
-    const outputPath = resolve(
-      '.',
-      'cdktf.out',
-      'stacks',
-      `${scope.projectId}`,
-      'assets',
-      `${this.constructId}.zip`,
-    )
-
-    this.archiveFile = new DataArchiveFile(this, this.id('archive', 'file'), {
-      outputPath,
-      sourceDir,
+    const archiveFile = new DataArchiveFile(this, this.id('archive-file'), {
       type: 'zip',
+      sourceDir,
+      outputPath: resolve(
+        cwd(),
+        '.cdktf.out',
+        'stacks',
+        scope.projectId,
+        'source.zip',
+      ),
+    })
+    const archive = new StorageBucketObject(this, this.id('archive'), {
+      bucket: bucket.name,
+      name: archiveFile.outputMd5,
+      source: archiveFile.outputPath,
     })
 
-    this.archive = new StorageBucketObject(this, this.id('archive'), {
-      bucket: this.bucket.name,
-      dependsOn: [this.bucket],
-      name: this.archiveFile.outputMd5,
-      source: this.archiveFile.outputPath,
+    // Grant the custom Cloud Build service account permission to write to the repo.
+    new ProjectIamMember(this, this.id('cloudbuild-registry-writer'), {
+      project: scope.projectId,
+      role: 'roles/artifactregistry.writer',
+      member: buildServiceAccount.member,
+      dependsOn: [repository],
     })
 
-    // Grant Cloud Build service account access to push to Artifact Registry
-    this.cloudBuildServiceAccountBinding = new ProjectIamMember(
-      this,
-      this.id('cloudbuild', 'registry', 'writer'),
-      {
-        project: scope.projectId,
-        role: 'roles/artifactregistry.writer',
-        member: `serviceAccount:${scope.projectNumber}@cloudbuild.gserviceaccount.com`,
-        dependsOn: [this.repository],
-      },
-    )
-
-    // Grant Cloud Build access to the source bucket
-    new StorageBucketIamBinding(
-      this,
-      this.id('cloudbuild', 'bucket', 'reader'),
-      {
-        bucket: this.bucket.name,
-        dependsOn: [this.bucket],
-        members: [
-          `serviceAccount:${scope.projectNumber}@cloudbuild.gserviceaccount.com`,
-        ],
-        role: 'roles/storage.objectViewer',
-      },
-    )
-
-    this.imageUri = `${region}-docker.pkg.dev/${scope.projectId}/${this.repository.name}/${serviceId}:latest`
-
-    // Define path for the build config file
-    const buildConfigPath = resolve(
-      '.',
-      'cdktf.out',
-      'build-configs',
-      `${this.constructId}.yaml`,
-    )
-
-    // Generate the content for the cloudbuild.yaml file
-    const cloudbuildYaml = this.generateBuildYaml({
-      dockerfile,
-      timeout: buildTimeout,
-      machineType,
-      buildArgs,
+    new StorageBucketIamBinding(this, this.id('cloudbuild-bucket-reader'), {
+      bucket: bucket.name,
+      members: [buildServiceAccount.member],
+      role: 'roles/storage.objectViewer',
     })
 
-    // Create the build config file using the 'local' provider
-    this.buildConfigFile = new File(this, this.id('build', 'config', 'file'), {
-      content: cloudbuildYaml,
-      filename: buildConfigPath,
+    // Grant the custom Cloud Build service account permission to write logs.
+    new ProjectIamMember(this, this.id('cloudbuild-logs-writer'), {
+      project: scope.projectId,
+      role: 'roles/logging.logWriter',
+      member: buildServiceAccount.member,
     })
 
-    // Create Cloud Build step using LocalExec
-    this.buildStep = new LocalExec(this, this.id('build', 'step'), {
-      dependsOn: [
-        this.archive,
-        this.cloudBuildServiceAccountBinding,
-        this.buildConfigFile,
-      ],
-      command: `gcloud builds submit --no-source --config="${this.buildConfigFile.filename}" --project=${scope.projectId} --verbosity=debug`,
-    })
-
-    // Grant the deployer SA permission to act as the Cloud Run SA.
-    // This is necessary for CI/CD pipelines where the deployer identity is different
-    // from the service's runtime identity. The email is passed via an env var.
     const deployerBinding = new ServiceAccountIamBinding(
       this,
-      this.id('deployer', 'sa', 'user'),
+      this.id('deployer-sa-user'),
       {
         serviceAccountId: scope.stackServiceAccount.id,
         role: 'roles/iam.serviceAccountUser',
@@ -289,22 +179,104 @@ export class CloudRunServiceConstruct<
       },
     )
 
-    const serviceDependencies: ITerraformDependable[] = [
-      this.buildStep as unknown as ITerraformDependable,
-      deployerBinding,
-    ]
+    // Grant the deployer SA permission to act as the build SA.
+    // This is the key dependency to prevent the build from running too early.
+    const deployerActAsBuildSa = new ServiceAccountIamMember(
+      this,
+      this.id('deployer', 'act', 'as', 'build', 'sa'),
+      {
+        serviceAccountId: buildServiceAccount.id,
+        role: 'roles/iam.serviceAccountUser',
+        member: `serviceAccount:${envConfig.deployerSaEmail}`,
+      },
+    )
 
-    // Create Cloud Run service
+    // --- Image URI & Build YAML ---
+    this.imageUri = `${region}-docker.pkg.dev/${scope.projectId}/${repository.name}/${serviceId}:latest`
+    const imageUriWithBuildId = this.imageUri.replace(':latest', ':\\$BUILD_ID') // Escape for shell
+    const buildArgsLines = Object.entries(buildArgs)
+      .map(([key, value]) => `      - '--build-arg=${key}=${value}'`)
+      .join('\n')
+    const cloudbuildYaml = `
+steps:
+  - name: 'gcr.io/cloud-builders/gsutil'
+    args: [
+      'cp',
+      'gs://${bucket.name}/${archive.name}',
+      '/workspace/source.zip',
+    ]
+  - name: ubuntu
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        apt-get update && apt-get install -y unzip
+        unzip /workspace/source.zip -d /workspace
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${this.imageUri}'
+      - '-t'
+      - '${imageUriWithBuildId}'
+      - '-f'
+      - '/workspace/${dockerfile}${buildArgsLines}'
+      - '/workspace'
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '${this.imageUri}']
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '${imageUriWithBuildId}']
+timeout: ${buildTimeout}
+options:
+  machineType: ${machineType}
+  logging: CLOUD_LOGGING_ONLY
+  substitution_option: ALLOW_LOOSE
+serviceAccount: '${buildServiceAccount.name}'
+`
+
+
+    // --- LocalExec Build Step ---
+    const buildScript = `
+      # Exit immediately if a command exits with a non-zero status.
+      set -e
+      # Trace commands before they are executed.
+      set -x
+
+      echo "Submitting build to project ${scope.projectId}..."
+
+      CLOUDBUILD_CONFIG=$(mktemp)
+      trap 'rm -f "$CLOUDBUILD_CONFIG"' EXIT
+      cat > "$CLOUDBUILD_CONFIG" <<EOF
+${cloudbuildYaml}
+EOF
+
+      gcloud builds submit --quiet --no-source --config="$CLOUDBUILD_CONFIG" --project=${scope.projectId} --billing-project=${scope.projectId}
+    `
+    const buildStep = new LocalExec(this, this.id('build-step'), {
+      dependsOn: [
+        deployerActAsBuildSa,
+        archive,
+      ],
+      command: buildScript,
+    })
+
+    const imagePropagationDelay = new Sleep(
+      this,
+      this.id('image-propagation-delay'),
+      {
+        createDuration: '30s',
+        dependsOn: [buildStep],
+      },
+    )
+
+    // --- Cloud Run Service ---
     this.service = new CloudRunV2Service(this, serviceId, {
       name: serviceId,
       location: region,
       project: scope.projectId,
       deletionProtection: false,
       template: {
-        scaling: {
-          minInstanceCount: minScale,
-          maxInstanceCount: maxScale,
-        },
+        scaling: { minInstanceCount: minScale, maxInstanceCount: maxScale },
         vpcAccess: {
           connector: scope.vpcConnectorId,
           egress: 'ALL_TRAFFIC',
@@ -312,112 +284,48 @@ export class CloudRunServiceConstruct<
         maxInstanceRequestConcurrency: containerConcurrency,
         timeout: `${timeoutSeconds}s`,
         serviceAccount: scope.stackServiceAccount.email,
+        executionEnvironment: 'EXECUTION_ENVIRONMENT_GEN2',
         containers: [
           {
             image: this.imageUri,
-            ports: {
-              containerPort,
-            },
-            resources: {
-              limits: {
-                cpu,
-                memory,
-              },
-            },
+            ports: { containerPort },
+            resources: { limits: { cpu, memory } },
             env: Object.entries(environmentVariables).map(([name, value]) => ({
               name,
               value,
             })),
+            startupProbe: {
+              tcpSocket: { port: containerPort },
+              initialDelaySeconds: 15,
+              timeoutSeconds: 10,
+              periodSeconds: 15,
+              failureThreshold: 5,
+            },
+            livenessProbe: {
+              httpGet: { path: '/health', port: containerPort },
+              initialDelaySeconds: 10,
+              timeoutSeconds: 1,
+              periodSeconds: 10,
+              failureThreshold: 3,
+            },
           },
         ],
-        executionEnvironment: 'EXECUTION_ENVIRONMENT_GEN2',
       },
-      timeouts: {
-        create: '20m', // Longer timeout to allow for container build
-        update: '10m',
-        delete: '5m',
-      },
-      dependsOn: serviceDependencies,
+      traffic: [{ type: 'TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST', percent: 100 }],
+      dependsOn: [imagePropagationDelay, deployerBinding, ...dependsOn],
     })
 
-    // Set up IAM bindings for invoking the service
-    this.invoker = new CloudRunServiceIamBinding(
-      this,
-      this.id('binding', 'invoker'),
-      {
-        location: region,
-        project: scope.projectId,
-        service: this.service.name,
-        role: 'roles/run.invoker',
-        members: [
-          `serviceAccount:${scope.stackServiceAccount.email}`,
-          `serviceAccount:service-${scope.projectNumber}@serverless-robot-prod.iam.gserviceaccount.com`,
-          ...grantInvokerPermissions,
-        ],
-        dependsOn: [this.service],
-      },
-    )
-  }
-
-  private generateBuildYaml(buildConfig: {
-    dockerfile: string
-    timeout: string
-    machineType: string
-    buildArgs: Record<string, string>
-  }): string {
-    const { dockerfile, timeout, machineType, buildArgs } = buildConfig
-
-    // Build arguments for docker build
-    const buildArgsLines = Object.entries(buildArgs)
-      .map(([key, value]) => `      - '--build-arg=${key}=${value}'`)
-      .join('\n')
-
-    const imageUriWithBuildId = this.imageUri.replace(':latest', ':$BUILD_ID')
-
-    // Read and substitute template
-    return cloudbuildTemplate
-      .replace(/\{\{BUCKET_NAME\}\}/g, this.bucket.name)
-      .replace(/\{\{ARCHIVE_NAME\}\}/g, this.archive.name)
-      .replace(/\{\{IMAGE_URI\}\}/g, this.imageUri)
-      .replace(/\{\{IMAGE_URI_WITH_BUILD_ID\}\}/g, imageUriWithBuildId)
-      .replace(/\{\{DOCKERFILE\}\}/g, dockerfile)
-      .replace(/\{\{BUILD_ARGS\}\}/g, buildArgsLines)
-      .replace(/\{\{MACHINE_TYPE\}\}/g, machineType)
-      .replace(/\{\{TIMEOUT\}\}/g, timeout)
+    // --- Service Invoker IAM ---
+    new CloudRunServiceIamBinding(this, this.id('binding-invoker'), {
+      location: region,
+      project: scope.projectId,
+      service: this.service.name,
+      role: 'roles/run.invoker',
+      members: [
+        `serviceAccount:${scope.stackServiceAccount.email}`,
+        ...grantInvokerPermissions,
+      ],
+      dependsOn: [this.service],
+    })
   }
 }
-
-const cloudbuildTemplate = `
-steps:
-  # Download and extract source
-  - name: 'gcr.io/cloud-builders/gsutil'
-    args: ['cp', 'gs://{{BUCKET_NAME}}/{{ARCHIVE_NAME}}', '/workspace/source.zip']
-
-  - name: 'ubuntu'
-    args: ['unzip', '/workspace/source.zip', '-d', '/workspace/src']
-
-  # Build Docker image
-  - name: 'gcr.io/cloud-builders/docker'
-    args:
-      - 'build'
-      - '-t'
-      - '{{IMAGE_URI}}'
-      - '-t'
-      - '{{IMAGE_URI_WITH_BUILD_ID}}'
-      - '-f'
-      - '/workspace/src/{{DOCKERFILE}}'
-{{BUILD_ARGS}}
-      - '/workspace/src'
-
-  # Push images
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', '{{IMAGE_URI}}']
-
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', '{{IMAGE_URI_WITH_BUILD_ID}}']
-
-options:
-  machineType: '{{MACHINE_TYPE}}'
-  logging: CLOUD_LOGGING_ONLY
-timeout: '{{TIMEOUT}}'
-`
