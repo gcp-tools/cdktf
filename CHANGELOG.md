@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.12.10](https://github.com/gcp-tools/cdktf/compare/v1.12.9...v1.12.10) (2025-06-19)
+
+### Bug Fixes
+
+* uses local exec hash in service ([10daff7](https://github.com/gcp-tools/cdktf/commit/10daff701d55caa2c8e209f429acee0d6704ae72))
+
 ## [1.12.9](https://github.com/gcp-tools/cdktf/compare/v1.12.8...v1.12.9) (2025-06-19)
 
 ### Bug Fixes
