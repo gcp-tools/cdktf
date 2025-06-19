@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.12.11](https://github.com/gcp-tools/cdktf/compare/v1.12.10...v1.12.11) (2025-06-19)
+
+### Bug Fixes
+
+* adds triggers back ([5570c6a](https://github.com/gcp-tools/cdktf/commit/5570c6a5a3a6c5b1796f524ad13a8bf5988478ac))
+
 ## [1.12.10](https://github.com/gcp-tools/cdktf/compare/v1.12.9...v1.12.10) (2025-06-19)
 
 ### Bug Fixes
