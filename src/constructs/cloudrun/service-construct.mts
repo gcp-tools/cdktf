@@ -24,7 +24,6 @@ import type { ITerraformDependable } from 'cdktf'
 import { LocalExec } from 'cdktf-local-exec'
 import type { AppStack } from '../../stacks/app-stack.mjs'
 import { envConfig } from '../../utils/env.mjs'
-import { computeSourceHash } from '../../utils/hash.mjs'
 import { BaseAppConstruct } from '../base-app-construct.mjs'
 
 
@@ -86,9 +85,6 @@ export class CloudRunServiceConstruct<
     const sourceDir = resolve(sourceDirectory, scope.stackId)
     const dockerfile = 'Dockerfile'
 
-    // --- Source Hash Computation (at synthesis time) ---
-    const sourceHash = computeSourceHash(sourceDir)
-
     // --- Service Account for the Build ---
     const buildServiceAccount = new ServiceAccount(this, this.id('build', 'sa'), {
       accountId: this.shortName('build', 'sa'),
@@ -144,13 +140,13 @@ export class CloudRunServiceConstruct<
         '.cdktf.out',
         'stacks',
         scope.projectId,
-        `${serviceId}-${sourceHash}.zip`,
+        `${serviceId}-source.zip`,
       ),
     })
 
     const archive = new StorageBucketObject(this, this.id('archive'), {
       bucket: bucket.name,
-      name: `${sourceHash}.zip`,
+      name: `${archiveFile.outputMd5}.zip`,
       source: archiveFile.outputPath,
     })
 
@@ -197,9 +193,9 @@ export class CloudRunServiceConstruct<
       },
     )
 
-    // --- Image URI & Build YAML ---
-    this.imageUri = `${region}-docker.pkg.dev/${scope.projectId}/${repository.name}/${serviceId}:${sourceHash}`
-    const imageUriWithBuildId = `${region}-docker.pkg.dev/${scope.projectId}/${repository.name}/${serviceId}:\$BUILD_ID`
+    // --- Image URI & Build YAML (Using Archive Hash) ---
+    this.imageUri = `${region}-docker.pkg.dev/${scope.projectId}/${repository.name}/${serviceId}:${archiveFile.outputMd5}`
+    const imageUriWithBuildId = `${region}-docker.pkg.dev/${scope.projectId}/${repository.name}/${serviceId}:$BUILD_ID`
     const buildArgsLines = Object.entries(buildArgs)
       .map(([key, value]) => `      - '--build-arg=${key}=${value}'`)
       .join('\n')
@@ -259,11 +255,11 @@ EOF
       gcloud builds submit --quiet --no-source --config="$CLOUDBUILD_CONFIG" --project=${scope.projectId} --billing-project=${scope.projectId}
     `
     const buildStep = new LocalExec(this, this.id('build-step'), {
+      command: buildScript,
       dependsOn: [
         deployerActAsBuildSa,
         archive,
       ],
-      command: buildScript,
     })
 
     const imagePropagationDelay = new Sleep(
@@ -318,7 +314,12 @@ EOF
         ],
       },
       traffic: [{ type: 'TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST', percent: 100 }],
-      dependsOn: [imagePropagationDelay, deployerBinding, ...dependsOn],
+      dependsOn: [
+        imagePropagationDelay,
+        deployerBinding,
+        buildStep,
+        ...dependsOn,
+      ],
     })
 
     // --- Service Invoker IAM ---
