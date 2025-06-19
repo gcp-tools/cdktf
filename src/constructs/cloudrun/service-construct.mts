@@ -52,13 +52,11 @@ export type CloudRunServiceConstructConfig = {
   }
 }
 
-export class CloudRunServiceConstruct<
-  T extends CloudRunServiceConstructConfig,
-> extends BaseAppConstruct<CloudRunServiceConstructConfig> {
+export class CloudRunServiceConstruct extends BaseAppConstruct<CloudRunServiceConstructConfig> {
   public service: CloudRunV2Service
   public imageUri: string
 
-  constructor(scope: AppStack, id: string, config: T) {
+  constructor(scope: AppStack, id: string, config: CloudRunServiceConstructConfig) {
     super(scope, id, config)
 
     const { buildConfig, region, serviceConfig } = config
