@@ -288,6 +288,7 @@ EOF
       ],
       command: buildScript,
       triggers: {
+        archive_name: archive.name,
         source_hash: sourceHashStep.id,
       },
     })
