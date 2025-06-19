@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.12.2](https://github.com/gcp-tools/cdktf/compare/v1.12.1...v1.12.2) (2025-06-19)
+
+### Bug Fixes
+
+* applies triggers to build step ([52a8279](https://github.com/gcp-tools/cdktf/commit/52a8279aa819e41e3c7b58ea859d84cfff142a06))
+
 ## [1.12.1](https://github.com/gcp-tools/cdktf/compare/v1.12.0...v1.12.1) (2025-06-19)
 
 ### Bug Fixes
