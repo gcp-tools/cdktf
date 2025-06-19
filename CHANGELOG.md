@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.12.6](https://github.com/gcp-tools/cdktf/compare/v1.12.5...v1.12.6) (2025-06-19)
+
+### Bug Fixes
+
+* uses local exec to build hash ([0411322](https://github.com/gcp-tools/cdktf/commit/0411322c3c8e36c7f3feec21e46530331c145a84))
+
 ## [1.12.5](https://github.com/gcp-tools/cdktf/compare/v1.12.4...v1.12.5) (2025-06-19)
 
 ### Bug Fixes
