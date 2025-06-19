@@ -224,22 +224,19 @@ export class CloudRunServiceConstruct<
       },
     )
 
-    // --- Image URI & Build YAML ---
-    this.imageUri = `${region}-docker.pkg.dev/${scope.projectId}/${repository.name}/${serviceId}:latest`
-    const imageUriWithBuildId = this.imageUri.replace(':latest', ':\\$BUILD_ID') // Escape for shell
+    // --- Image URI & Build YAML (Using Archive Hash) ---
+    const imageName = `${region}-docker.pkg.dev/${scope.projectId}/${repository.name}/${serviceId}`
+    this.imageUri = `${imageName}:${sourceHashStep.id}`
+
     const buildArgsLines = Object.entries(buildArgs)
       .map(([key, value]) => `      - '--build-arg=${key}=${value}'`)
       .join('\n')
     const cloudbuildYaml = `
 steps:
   - name: 'gcr.io/cloud-builders/gsutil'
-    args: [
-      'cp',
-      'gs://${bucket.name}/${archive.name}',
-      '/workspace/source.zip',
-    ]
-  - name: ubuntu
-    entrypoint: bash
+    args: ['cp', 'gs://${bucket.name}/${archive.name}', '/workspace/source.zip']
+  - name: 'ubuntu'
+    entrypoint: 'bash'
     args:
       - -c
       - |
@@ -249,21 +246,19 @@ steps:
     args:
       - 'build'
       - '-t'
-      - '${this.imageUri}'
+      - '${imageName}:latest' # Floating tag for developers
       - '-t'
-      - '${imageUriWithBuildId}'
+      - '${this.imageUri}' # Immutable tag for this specific source version
       - '-f'
-      - '/workspace/${dockerfile}${buildArgsLines}'
+      - '/workspace/${dockerfile}'
+${buildArgsLines}
       - '/workspace'
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', '${this.imageUri}']
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', '${imageUriWithBuildId}']
+    args: ['push', '--all-tags', '${imageName}']
 timeout: ${buildTimeout}
 options:
   machineType: ${machineType}
   logging: CLOUD_LOGGING_ONLY
-  substitution_option: ALLOW_LOOSE
 serviceAccount: '${buildServiceAccount.name}'
 `
 
