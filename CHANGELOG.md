@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.12.7](https://github.com/gcp-tools/cdktf/compare/v1.12.6...v1.12.7) (2025-06-19)
+
+### Bug Fixes
+
+* resets to last working build version ([fe229e6](https://github.com/gcp-tools/cdktf/commit/fe229e6456c2570261b0aef208bdf81883d54f72))
+
 ## [1.12.6](https://github.com/gcp-tools/cdktf/compare/v1.12.5...v1.12.6) (2025-06-19)
 
 ### Bug Fixes
