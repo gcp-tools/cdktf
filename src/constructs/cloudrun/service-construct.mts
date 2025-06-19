@@ -16,7 +16,7 @@ import { ProjectIamMember } from '@cdktf/provider-google/lib/project-iam-member/
 import { ServiceAccount } from '@cdktf/provider-google/lib/service-account/index.js'
 import { ServiceAccountIamBinding } from '@cdktf/provider-google/lib/service-account-iam-binding/index.js'
 import { ServiceAccountIamMember } from '@cdktf/provider-google/lib/service-account-iam-member/index.js'
-// import { Sleep } from '@cdktf/provider-time/lib/sleep/index.js'
+import { Sleep } from '@cdktf/provider-time/lib/sleep/index.js'
 import { StorageBucketIamBinding } from '@cdktf/provider-google/lib/storage-bucket-iam-binding/index.js'
 import { StorageBucketObject } from '@cdktf/provider-google/lib/storage-bucket-object/index.js'
 import { StorageBucket } from '@cdktf/provider-google/lib/storage-bucket/index.js'
@@ -86,16 +86,30 @@ export class CloudRunServiceConstruct<
     const dockerfile = 'Dockerfile'
 
     // --- Source Hash Computation ---
+    // Compute a hash of all source files to detect changes automatically
+    // Uses include-first approach to automatically detect any source files
     const sourceHashStep = new LocalExec(this, this.id('source-hash'), {
       command: `
         cd "${sourceDir}" && \
         find . -type f \
-          ! -path "./node_modules/*" ! -path "./dist/*" ! -path "./build/*" \
-          ! -path "./target/*" ! -path "./.git/*" ! -path "./.terraform/*" \
-          ! -path "./.cdktf/*" ! -path "./coverage/*" ! -path "./.nyc_output/*" \
-          ! -path "./.next/*" ! -path "./.nuxt/*" ! -path "./.cache/*" \
-          ! -path "./tmp/*" ! -path "./temp/*" ! -path "./*.log" \
-          ! -name "*.log" ! -name ".DS_Store" ! -name "Thumbs.db" \
+          ! -path "./node_modules/*" \
+          ! -path "./dist/*" \
+          ! -path "./build/*" \
+          ! -path "./target/*" \
+          ! -path "./.git/*" \
+          ! -path "./.terraform/*" \
+          ! -path "./.cdktf/*" \
+          ! -path "./coverage/*" \
+          ! -path "./.nyc_output/*" \
+          ! -path "./.next/*" \
+          ! -path "./.nuxt/*" \
+          ! -path "./.cache/*" \
+          ! -path "./tmp/*" \
+          ! -path "./temp/*" \
+          ! -path "./*.log" \
+          ! -name "*.log" \
+          ! -name ".DS_Store" \
+          ! -name "Thumbs.db" \
         | sort | md5sum | cut -d' ' -f1
       `,
     })
@@ -155,14 +169,16 @@ export class CloudRunServiceConstruct<
         '.cdktf.out',
         'stacks',
         scope.projectId,
-        `${serviceId}-source.zip`,
+        `${serviceId}-${sourceHashStep.id}.zip`,
       ),
+      dependsOn: [sourceHashStep],
     })
 
     const archive = new StorageBucketObject(this, this.id('archive'), {
       bucket: bucket.name,
-      name: `${sourceHashStep.id}-${archiveFile.outputMd5}.zip`,
+      name: archiveFile.outputMd5,
       source: archiveFile.outputPath,
+      dependsOn: [archiveFile],
     })
 
     // Grant the custom Cloud Build service account permission to write to the repo.
@@ -208,18 +224,22 @@ export class CloudRunServiceConstruct<
       },
     )
 
-    // --- Image URI & Build YAML (Using a Dynamic Tag) ---
-    const imageName = `${region}-docker.pkg.dev/${scope.projectId}/${repository.name}/${serviceId}`;
-    const imageTag = sourceHashStep.id; // Use the hash as the tag
-    this.imageUri = `${imageName}:${imageTag}`;
-    const imageUriWithBuildId = `${imageName}:$BUILD_ID`;
-
+    // --- Image URI & Build YAML ---
+    this.imageUri = `${region}-docker.pkg.dev/${scope.projectId}/${repository.name}/${serviceId}:latest`
+    const imageUriWithBuildId = this.imageUri.replace(':latest', ':\\$BUILD_ID') // Escape for shell
+    const buildArgsLines = Object.entries(buildArgs)
+      .map(([key, value]) => `      - '--build-arg=${key}=${value}'`)
+      .join('\n')
     const cloudbuildYaml = `
 steps:
   - name: 'gcr.io/cloud-builders/gsutil'
-    args: ['cp', 'gs://${bucket.name}/${archive.name}', '/workspace/source.zip']
-  - name: 'ubuntu'
-    entrypoint: 'bash'
+    args: [
+      'cp',
+      'gs://${bucket.name}/${archive.name}',
+      '/workspace/source.zip',
+    ]
+  - name: ubuntu
+    entrypoint: bash
     args:
       - -c
       - |
@@ -229,12 +249,11 @@ steps:
     args:
       - 'build'
       - '-t'
-      - '${this.imageUri}' # Tag with the source hash
+      - '${this.imageUri}'
       - '-t'
-      - '${imageUriWithBuildId}' # Also tag with the build ID
+      - '${imageUriWithBuildId}'
       - '-f'
-      - '/workspace/${dockerfile}'
-${Object.entries(buildArgs).map(([key, value]) => `      - '--build-arg=${key}=${value}'`).join('\n')}
+      - '/workspace/${dockerfile}${buildArgsLines}'
       - '/workspace'
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', '${this.imageUri}']
@@ -244,10 +263,10 @@ timeout: ${buildTimeout}
 options:
   machineType: ${machineType}
   logging: CLOUD_LOGGING_ONLY
-substitutions:
-  _IMAGE_TAG: 'latest' # Default value, will be overridden
+  substitution_option: ALLOW_LOOSE
 serviceAccount: '${buildServiceAccount.name}'
 `
+
 
     // --- LocalExec Build Step ---
     const buildScript = `
@@ -264,24 +283,25 @@ serviceAccount: '${buildServiceAccount.name}'
 ${cloudbuildYaml}
 EOF
 
-      gcloud builds submit --quiet --no-source --config="$CLOUDBUILD_CONFIG" --project=${scope.projectId} --billing-project=${scope.projectId} --substitutions=_IMAGE_TAG=${sourceHashStep.id}
+      gcloud builds submit --quiet --no-source --config="$CLOUDBUILD_CONFIG" --project=${scope.projectId} --billing-project=${scope.projectId}
     `
     const buildStep = new LocalExec(this, this.id('build-step'), {
+      dependsOn: [
+        deployerActAsBuildSa,
+        archive,
+        sourceHashStep,
+      ],
       command: buildScript,
-      dependsOn: [deployerActAsBuildSa, archive],
-      triggers: {
-        archive_name: archive.name,
-      },
     })
 
-    // const imagePropagationDelay = new Sleep(
-    //   this,
-    //   this.id('image-propagation-delay'),
-    //   {
-    //     createDuration: '30s',
-    //     dependsOn: [buildStep],
-    //   },
-    // )
+    const imagePropagationDelay = new Sleep(
+      this,
+      this.id('image-propagation-delay'),
+      {
+        createDuration: '30s',
+        dependsOn: [buildStep],
+      },
+    )
 
     // --- Cloud Run Service ---
     this.service = new CloudRunV2Service(this, serviceId, {
@@ -326,7 +346,7 @@ EOF
         ],
       },
       traffic: [{ type: 'TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST', percent: 100 }],
-      dependsOn: [deployerBinding, buildStep, ...dependsOn],
+      dependsOn: [imagePropagationDelay, deployerBinding, ...dependsOn],
     })
 
     // --- Service Invoker IAM ---
