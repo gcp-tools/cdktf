@@ -85,6 +85,21 @@ export class CloudRunServiceConstruct<
     const sourceDir = resolve(sourceDirectory, scope.stackId)
     const dockerfile = 'Dockerfile'
 
+    // --- Source Hash Computation ---
+    const sourceHashStep = new LocalExec(this, this.id('source-hash'), {
+      command: `
+        cd "${sourceDir}" && \
+        find . -type f \
+          ! -path "./node_modules/*" ! -path "./dist/*" ! -path "./build/*" \
+          ! -path "./target/*" ! -path "./.git/*" ! -path "./.terraform/*" \
+          ! -path "./.cdktf/*" ! -path "./coverage/*" ! -path "./.nyc_output/*" \
+          ! -path "./.next/*" ! -path "./.nuxt/*" ! -path "./.cache/*" \
+          ! -path "./tmp/*" ! -path "./temp/*" ! -path "./*.log" \
+          ! -name "*.log" ! -name ".DS_Store" ! -name "Thumbs.db" \
+        | sort | md5sum | cut -d' ' -f1
+      `,
+    })
+
     // --- Service Account for the Build ---
     const buildServiceAccount = new ServiceAccount(this, this.id('build', 'sa'), {
       accountId: this.shortName('build', 'sa'),
@@ -146,7 +161,7 @@ export class CloudRunServiceConstruct<
 
     const archive = new StorageBucketObject(this, this.id('archive'), {
       bucket: bucket.name,
-      name: `${archiveFile.outputMd5}.zip`,
+      name: `${sourceHashStep.id}-${archiveFile.outputMd5}.zip`,
       source: archiveFile.outputPath,
     })
 
@@ -193,14 +208,12 @@ export class CloudRunServiceConstruct<
       },
     )
 
-    // --- Image URI & Build YAML (Using Substitutions) ---
-    const imageName = `${region}-docker.pkg.dev/${scope.projectId}/${repository.name}/${serviceId}`
-    this.imageUri = `${imageName}:\${_IMAGE_TAG}` // Will be substituted by Cloud Build
+    // --- Image URI & Build YAML (Using a Dynamic Tag) ---
+    const imageName = `${region}-docker.pkg.dev/${scope.projectId}/${repository.name}/${serviceId}`;
+    const imageTag = sourceHashStep.id; // Use the hash as the tag
+    this.imageUri = `${imageName}:${imageTag}`;
+    const imageUriWithBuildId = `${imageName}:$BUILD_ID`;
 
-    // const imageUriWithBuildId = `${imageName}:$BUILD_ID`
-    const buildArgsLines = Object.entries(buildArgs)
-      .map(([key, value]) => `      - '--build-arg=${key}=${value}'`)
-      .join('\n')
     const cloudbuildYaml = `
 steps:
   - name: 'gcr.io/cloud-builders/gsutil'
@@ -216,17 +229,17 @@ steps:
     args:
       - 'build'
       - '-t'
-      - '${imageName}:\${_IMAGE_TAG}'
+      - '${this.imageUri}' # Tag with the source hash
       - '-t'
-      - '${imageName}:$BUILD_ID'
+      - '${imageUriWithBuildId}' # Also tag with the build ID
       - '-f'
       - '/workspace/${dockerfile}'
-${buildArgsLines}
+${Object.entries(buildArgs).map(([key, value]) => `      - '--build-arg=${key}=${value}'`).join('\n')}
       - '/workspace'
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', '${imageName}:\${_IMAGE_TAG}']
+    args: ['push', '${this.imageUri}']
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', '${imageName}:$BUILD_ID']
+    args: ['push', '${imageUriWithBuildId}']
 timeout: ${buildTimeout}
 options:
   machineType: ${machineType}
@@ -235,7 +248,6 @@ substitutions:
   _IMAGE_TAG: 'latest' # Default value, will be overridden
 serviceAccount: '${buildServiceAccount.name}'
 `
-
 
     // --- LocalExec Build Step ---
     const buildScript = `
@@ -252,14 +264,14 @@ serviceAccount: '${buildServiceAccount.name}'
 ${cloudbuildYaml}
 EOF
 
-      gcloud builds submit --quiet --no-source --config="$CLOUDBUILD_CONFIG" --project=${scope.projectId} --billing-project=${scope.projectId} --substitutions=_IMAGE_TAG=${archiveFile.outputMd5}
+      gcloud builds submit --quiet --no-source --config="$CLOUDBUILD_CONFIG" --project=${scope.projectId} --billing-project=${scope.projectId} --substitutions=_IMAGE_TAG=${sourceHashStep.id}
     `
     const buildStep = new LocalExec(this, this.id('build-step'), {
       command: buildScript,
-      dependsOn: [
-        deployerActAsBuildSa,
-        archive,
-      ],
+      dependsOn: [deployerActAsBuildSa, archive],
+      triggers: {
+        archive_name: archive.name,
+      },
     })
 
     // const imagePropagationDelay = new Sleep(
@@ -289,7 +301,7 @@ EOF
         executionEnvironment: 'EXECUTION_ENVIRONMENT_GEN2',
         containers: [
           {
-            image: this.imageUri.replace(/\$\{_IMAGE_TAG\}/g, archiveFile.outputMd5),
+            image: this.imageUri,
             ports: { containerPort },
             resources: { limits: { cpu, memory } },
             env: Object.entries(environmentVariables).map(([name, value]) => ({
