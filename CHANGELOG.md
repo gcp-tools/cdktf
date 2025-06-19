@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.12.5](https://github.com/gcp-tools/cdktf/compare/v1.12.4...v1.12.5) (2025-06-19)
+
+### Bug Fixes
+
+* retries hashing mechanism. again. ([599b7e4](https://github.com/gcp-tools/cdktf/commit/599b7e4a1a862a79189a7d360a803f96fd78b5ef))
+
 ## [1.12.4](https://github.com/gcp-tools/cdktf/compare/v1.12.3...v1.12.4) (2025-06-19)
 
 ### Bug Fixes
