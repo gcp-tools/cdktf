@@ -16,7 +16,7 @@ import { ProjectIamMember } from '@cdktf/provider-google/lib/project-iam-member/
 import { ServiceAccount } from '@cdktf/provider-google/lib/service-account/index.js'
 import { ServiceAccountIamBinding } from '@cdktf/provider-google/lib/service-account-iam-binding/index.js'
 import { ServiceAccountIamMember } from '@cdktf/provider-google/lib/service-account-iam-member/index.js'
-import { Sleep } from '@cdktf/provider-time/lib/sleep/index.js'
+// import { Sleep } from '@cdktf/provider-time/lib/sleep/index.js'
 import { StorageBucketIamBinding } from '@cdktf/provider-google/lib/storage-bucket-iam-binding/index.js'
 import { StorageBucketObject } from '@cdktf/provider-google/lib/storage-bucket-object/index.js'
 import { StorageBucket } from '@cdktf/provider-google/lib/storage-bucket/index.js'
@@ -193,22 +193,20 @@ export class CloudRunServiceConstruct<
       },
     )
 
-    // --- Image URI & Build YAML (Using Archive Hash) ---
-    this.imageUri = `${region}-docker.pkg.dev/${scope.projectId}/${repository.name}/${serviceId}:${archiveFile.outputMd5}`
-    const imageUriWithBuildId = `${region}-docker.pkg.dev/${scope.projectId}/${repository.name}/${serviceId}:$BUILD_ID`
+    // --- Image URI & Build YAML (Using Substitutions) ---
+    const imageName = `${region}-docker.pkg.dev/${scope.projectId}/${repository.name}/${serviceId}`
+    this.imageUri = `${imageName}:\${_IMAGE_TAG}` // Will be substituted by Cloud Build
+
+    // const imageUriWithBuildId = `${imageName}:$BUILD_ID`
     const buildArgsLines = Object.entries(buildArgs)
       .map(([key, value]) => `      - '--build-arg=${key}=${value}'`)
       .join('\n')
     const cloudbuildYaml = `
 steps:
   - name: 'gcr.io/cloud-builders/gsutil'
-    args: [
-      'cp',
-      'gs://${bucket.name}/${archive.name}',
-      '/workspace/source.zip',
-    ]
-  - name: ubuntu
-    entrypoint: bash
+    args: ['cp', 'gs://${bucket.name}/${archive.name}', '/workspace/source.zip']
+  - name: 'ubuntu'
+    entrypoint: 'bash'
     args:
       - -c
       - |
@@ -218,21 +216,23 @@ steps:
     args:
       - 'build'
       - '-t'
-      - '${this.imageUri}'
+      - '${imageName}:\${_IMAGE_TAG}'
       - '-t'
-      - '${imageUriWithBuildId}'
+      - '${imageName}:$BUILD_ID'
       - '-f'
-      - '/workspace/${dockerfile}${buildArgsLines}'
+      - '/workspace/${dockerfile}'
+${buildArgsLines}
       - '/workspace'
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', '${this.imageUri}']
+    args: ['push', '${imageName}:\${_IMAGE_TAG}']
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', '${imageUriWithBuildId}']
+    args: ['push', '${imageName}:$BUILD_ID']
 timeout: ${buildTimeout}
 options:
   machineType: ${machineType}
   logging: CLOUD_LOGGING_ONLY
-  substitution_option: ALLOW_LOOSE
+substitutions:
+  _IMAGE_TAG: 'latest' # Default value, will be overridden
 serviceAccount: '${buildServiceAccount.name}'
 `
 
@@ -252,7 +252,7 @@ serviceAccount: '${buildServiceAccount.name}'
 ${cloudbuildYaml}
 EOF
 
-      gcloud builds submit --quiet --no-source --config="$CLOUDBUILD_CONFIG" --project=${scope.projectId} --billing-project=${scope.projectId}
+      gcloud builds submit --quiet --no-source --config="$CLOUDBUILD_CONFIG" --project=${scope.projectId} --billing-project=${scope.projectId} --substitutions=_IMAGE_TAG=${archiveFile.outputMd5}
     `
     const buildStep = new LocalExec(this, this.id('build-step'), {
       command: buildScript,
@@ -262,14 +262,14 @@ EOF
       ],
     })
 
-    const imagePropagationDelay = new Sleep(
-      this,
-      this.id('image-propagation-delay'),
-      {
-        createDuration: '30s',
-        dependsOn: [buildStep],
-      },
-    )
+    // const imagePropagationDelay = new Sleep(
+    //   this,
+    //   this.id('image-propagation-delay'),
+    //   {
+    //     createDuration: '30s',
+    //     dependsOn: [buildStep],
+    //   },
+    // )
 
     // --- Cloud Run Service ---
     this.service = new CloudRunV2Service(this, serviceId, {
@@ -289,7 +289,7 @@ EOF
         executionEnvironment: 'EXECUTION_ENVIRONMENT_GEN2',
         containers: [
           {
-            image: this.imageUri,
+            image: this.imageUri.replace(/\$\{_IMAGE_TAG\}/g, archiveFile.outputMd5),
             ports: { containerPort },
             resources: { limits: { cpu, memory } },
             env: Object.entries(environmentVariables).map(([name, value]) => ({
@@ -314,12 +314,7 @@ EOF
         ],
       },
       traffic: [{ type: 'TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST', percent: 100 }],
-      dependsOn: [
-        imagePropagationDelay,
-        deployerBinding,
-        buildStep,
-        ...dependsOn,
-      ],
+      dependsOn: [deployerBinding, buildStep, ...dependsOn],
     })
 
     // --- Service Invoker IAM ---
