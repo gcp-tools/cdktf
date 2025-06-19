@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.12.13](https://github.com/gcp-tools/cdktf/compare/v1.12.12...v1.12.13) (2025-06-19)
+
+### Bug Fixes
+
+* simplifies cloudrun config ([b954f7c](https://github.com/gcp-tools/cdktf/commit/b954f7c6374117b4ac449701c8f0bd78aad0bc08))
+
 ## [1.12.12](https://github.com/gcp-tools/cdktf/compare/v1.12.11...v1.12.12) (2025-06-19)
 
 ### Bug Fixes
