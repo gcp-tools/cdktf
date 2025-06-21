@@ -19,8 +19,8 @@
       "types": "./dist/stacks/infrastructure/index.d.mts"
     },
     "./stacks/ingress": {
-      "default": "./dist/stacks/ingress/index.mjs",
-      "types": "./dist/stacks/ingress/index.d.mts"
+      "default": "./dist/stacks/ingress-stack.mjs",
+      "types": "./dist/stacks/ingress-stack.d.mts"
     },
     "./stacks/projects": {
       "default": "./dist/stacks/projects/index.mjs",
