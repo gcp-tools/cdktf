@@ -18,6 +18,10 @@
       "default": "./dist/stacks/infrastructure/index.mjs",
       "types": "./dist/stacks/infrastructure/index.d.mts"
     },
+    "./stacks/ingress": {
+      "default": "./dist/stacks/ingress/index.mjs",
+      "types": "./dist/stacks/ingress/index.d.mts"
+    },
     "./stacks/projects": {
       "default": "./dist/stacks/projects/index.mjs",
       "types": "./dist/stacks/projects/index.d.mts"
