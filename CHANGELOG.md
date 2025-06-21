@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.12.15](https://github.com/gcp-tools/cdktf/compare/v1.12.14...v1.12.15) (2025-06-21)
+
+### Bug Fixes
+
+* updates export again ([d6eb329](https://github.com/gcp-tools/cdktf/commit/d6eb329b9eb3bba1d0c0ac0febb78bac9a489ba6))
+
 ## [1.12.14](https://github.com/gcp-tools/cdktf/compare/v1.12.13...v1.12.14) (2025-06-21)
 
 ### Bug Fixes
