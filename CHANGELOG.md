@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.12.14](https://github.com/gcp-tools/cdktf/compare/v1.12.13...v1.12.14) (2025-06-21)
+
+### Bug Fixes
+
+* exports ingress stack correctly ([734af39](https://github.com/gcp-tools/cdktf/commit/734af394655a5b5b8357f7c18a1e91c860332ea4))
+
 ## [1.12.13](https://github.com/gcp-tools/cdktf/compare/v1.12.12...v1.12.13) (2025-06-19)
 
 ### Bug Fixes
