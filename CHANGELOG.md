@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.12.16](https://github.com/gcp-tools/cdktf/compare/v1.12.15...v1.12.16) (2025-06-21)
+
+### Bug Fixes
+
+* exports ingress constructs ([321ccb7](https://github.com/gcp-tools/cdktf/commit/321ccb7f889d51ee3f81638beb2da34b9008100d))
+
 ## [1.12.15](https://github.com/gcp-tools/cdktf/compare/v1.12.14...v1.12.15) (2025-06-21)
 
 ### Bug Fixes
