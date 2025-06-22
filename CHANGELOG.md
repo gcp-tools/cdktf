@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.17](https://github.com/gcp-tools/cdktf/compare/v1.12.16...v1.12.17) (2025-06-22)
+
+### Bug Fixes
+
+* adds template provider ([3e16153](https://github.com/gcp-tools/cdktf/commit/3e16153478426f971421917227abb4ffcad1bf6e))
+* updates the ingress stack to create a service account ([6e13eb6](https://github.com/gcp-tools/cdktf/commit/6e13eb6ec505711c9a158fc44d50e00f0a0e8f8e))
+
 ## [1.12.16](https://github.com/gcp-tools/cdktf/compare/v1.12.15...v1.12.16) (2025-06-21)
 
 ### Bug Fixes
