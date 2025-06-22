@@ -13,19 +13,18 @@ import { ArtifactRegistryRepository } from '@cdktf/provider-google/lib/artifact-
 import { CloudRunServiceIamBinding } from '@cdktf/provider-google/lib/cloud-run-service-iam-binding/index.js'
 import { CloudRunV2Service } from '@cdktf/provider-google/lib/cloud-run-v2-service/index.js'
 import { ProjectIamMember } from '@cdktf/provider-google/lib/project-iam-member/index.js'
-import { ServiceAccount } from '@cdktf/provider-google/lib/service-account/index.js'
 import { ServiceAccountIamBinding } from '@cdktf/provider-google/lib/service-account-iam-binding/index.js'
 import { ServiceAccountIamMember } from '@cdktf/provider-google/lib/service-account-iam-member/index.js'
-import { Sleep } from '@cdktf/provider-time/lib/sleep/index.js'
+import { ServiceAccount } from '@cdktf/provider-google/lib/service-account/index.js'
 import { StorageBucketIamBinding } from '@cdktf/provider-google/lib/storage-bucket-iam-binding/index.js'
 import { StorageBucketObject } from '@cdktf/provider-google/lib/storage-bucket-object/index.js'
 import { StorageBucket } from '@cdktf/provider-google/lib/storage-bucket/index.js'
+import { Sleep } from '@cdktf/provider-time/lib/sleep/index.js'
 import type { ITerraformDependable } from 'cdktf'
 import { LocalExec } from 'cdktf-local-exec'
 import type { AppStack } from '../../stacks/app-stack.mjs'
 import { envConfig } from '../../utils/env.mjs'
 import { BaseAppConstruct } from '../base-app-construct.mjs'
-
 
 const sourceDirectory = resolve(cwd(), '..', '..', 'services')
 
@@ -56,7 +55,11 @@ export class CloudRunServiceConstruct extends BaseAppConstruct<CloudRunServiceCo
   public service: CloudRunV2Service
   public imageUri: string
 
-  constructor(scope: AppStack, id: string, config: CloudRunServiceConstructConfig) {
+  constructor(
+    scope: AppStack,
+    id: string,
+    config: CloudRunServiceConstructConfig,
+  ) {
     super(scope, id, config)
 
     const { buildConfig, region, serviceConfig } = config
@@ -113,35 +116,39 @@ export class CloudRunServiceConstruct extends BaseAppConstruct<CloudRunServiceCo
     })
 
     // --- Service Account for the Build ---
-    const buildServiceAccount = new ServiceAccount(this, this.id('build', 'sa'), {
-      accountId: this.shortName('build', 'sa'),
-      displayName: 'Cloud Build SA',
-      project: scope.projectId,
-    })
+    const buildServiceAccount = new ServiceAccount(
+      this,
+      this.id('build', 'sa'),
+      {
+        accountId: this.shortName('build', 'sa'),
+        displayName: 'Cloud Build SA',
+        project: scope.projectId,
+      },
+    )
 
     // --- Artifact Registry Repository ---
     const cleanupPolicies =
-    imageRetentionCount > 0
-      ? [
-          {
-            id: 'keep-most-recent',
-            action: 'KEEP',
-            condition: {
-              packageNamePrefixes: [serviceId.toLowerCase()],
-              tagState: 'ANY',
-              newerCountThan: imageRetentionCount,
+      imageRetentionCount > 0
+        ? [
+            {
+              id: 'keep-most-recent',
+              action: 'KEEP',
+              condition: {
+                packageNamePrefixes: [serviceId.toLowerCase()],
+                tagState: 'ANY',
+                newerCountThan: imageRetentionCount,
+              },
             },
-          },
-          {
-            id: 'delete-old-images',
-            action: 'DELETE',
-            condition: {
-              packageNamePrefixes: [serviceId.toLowerCase()],
-              tagState: 'ANY',
+            {
+              id: 'delete-old-images',
+              action: 'DELETE',
+              condition: {
+                packageNamePrefixes: [serviceId.toLowerCase()],
+                tagState: 'ANY',
+              },
             },
-          },
-        ]
-      : undefined
+          ]
+        : undefined
     const repository = new ArtifactRegistryRepository(this, this.id('repo'), {
       repositoryId: this.id('repo').toLowerCase(),
       format: 'DOCKER',
@@ -260,7 +267,6 @@ options:
 serviceAccount: '${buildServiceAccount.name}'
 `
 
-
     // --- LocalExec Build Step ---
     const buildScript = `
       # Exit immediately if a command exits with a non-zero status.
@@ -279,11 +285,7 @@ EOF
       gcloud builds submit --quiet --no-source --config="$CLOUDBUILD_CONFIG" --project=${scope.projectId} --billing-project=${scope.projectId}
     `
     const buildStep = new LocalExec(this, this.id('build-step'), {
-      dependsOn: [
-        deployerActAsBuildSa,
-        archive,
-        archiveFile,
-      ],
+      dependsOn: [deployerActAsBuildSa, archive, archiveFile],
       command: buildScript,
       triggers: {
         archive_name: archive.name,
@@ -342,7 +344,9 @@ EOF
           },
         ],
       },
-      traffic: [{ type: 'TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST', percent: 100 }],
+      traffic: [
+        { type: 'TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST', percent: 100 },
+      ],
       dependsOn: [imagePropagationDelay, deployerBinding, ...dependsOn],
     })
 

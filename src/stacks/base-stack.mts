@@ -3,7 +3,6 @@ import { GoogleProvider } from '@cdktf/provider-google/lib/provider/index.js'
 import { LocalProvider } from '@cdktf/provider-local/lib/provider/index.js'
 import { NullProvider } from '@cdktf/provider-null/lib/provider/index.js'
 import { RandomProvider } from '@cdktf/provider-random/lib/provider/index.js'
-import { TemplateProvider } from '@cdktf/provider-template/lib/provider/index.js'
 import { TimeProvider } from '@cdktf/provider-time/lib/provider/index.js'
 import { GcsBackend, TerraformStack } from 'cdktf'
 import type { Construct } from 'constructs'
@@ -48,7 +47,6 @@ export class BaseStack<T extends BaseStackConfig> extends TerraformStack {
     new LocalProvider(this, this.id('provider', 'local'))
     new NullProvider(this, this.id('provider', 'null'))
     new RandomProvider(this, this.id('provider', 'random'))
-    new TemplateProvider(this, this.id('provider', 'template'))
     new TimeProvider(this, this.id('provider', 'time'))
 
     new GcsBackend(this, {

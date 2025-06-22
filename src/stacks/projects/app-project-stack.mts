@@ -54,25 +54,16 @@ export class AppProjectStack extends BaseProjectStack {
       })
     }
 
-    new ProjectIamMember(
-      this,
-      this.id('iam', 'deployer', 'editor'),
-      {
-        project: this.projectId,
-        role: 'roles/serviceusage.serviceUsageAdmin',
-        member: `serviceAccount:${envConfig.deployerSaEmail}`,
-      },
-    )
+    new ProjectIamMember(this, this.id('iam', 'deployer', 'editor'), {
+      project: this.projectId,
+      role: 'roles/serviceusage.serviceUsageAdmin',
+      member: `serviceAccount:${envConfig.deployerSaEmail}`,
+    })
 
-    new ProjectIamMember(
-      this,
-      this.id('iam', 'deployer', 'builder'),
-      {
-        project: this.projectId,
-        role: 'roles/cloudbuild.builds.builder',
-        member: `serviceAccount:${envConfig.deployerSaEmail}`,
-      },
-    )
-
+    new ProjectIamMember(this, this.id('iam', 'deployer', 'builder'), {
+      project: this.projectId,
+      role: 'roles/cloudbuild.builds.builder',
+      member: `serviceAccount:${envConfig.deployerSaEmail}`,
+    })
   }
 }

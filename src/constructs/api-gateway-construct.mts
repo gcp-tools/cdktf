@@ -42,6 +42,7 @@ import { BaseIngressConstruct } from './base-ingress-construct.mjs'
 export type ApiGatewayConfig = {
   // regions: string[]
   apiGatewayConfig: {
+    cloudRunServiceName: string
     displayName: string
     openapiDocuments: {
       document: {
