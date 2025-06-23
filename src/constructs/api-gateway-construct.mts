@@ -27,155 +27,98 @@ import {
   googleApiGatewayApi,
   googleApiGatewayApiConfig,
   googleApiGatewayGateway,
+  googleComputeRegionNetworkEndpointGroup,
 } from '@cdktf/provider-google-beta'
 
-import {
-  computeBackendService,
-  computeHealthCheck,
-  computeRegionNetworkEndpointGroup,
-} from '@cdktf/provider-google'
-import { TerraformOutput } from 'cdktf'
+import { readFileSync } from 'node:fs'
 import type { IngressStack } from '../stacks/ingress-stack.mjs'
-import { envConfig } from '../utils/env.mjs'
 import { BaseIngressConstruct } from './base-ingress-construct.mjs'
 
+export type CloudRunServiceConfig = {
+  key: string
+  name: string
+  uri: string
+}
+
 export type ApiGatewayConfig = {
-  // regions: string[]
-  apiGatewayConfig: {
-    cloudRunServiceName: string
-    displayName: string
-    openapiDocuments: {
-      document: {
-        contents: string
-        path: string
-      }
-    }[]
-  }
+  cloudRunServices: CloudRunServiceConfig[]
+  displayName: string
+  openApiTemplatePath: string
+  region: string
 }
 
 export class ApiGatewayConstruct extends BaseIngressConstruct<ApiGatewayConfig> {
-  protected apiGateway: googleApiGatewayApi.GoogleApiGatewayApi
-  protected apiConfig: googleApiGatewayApiConfig.GoogleApiGatewayApiConfigA
-  protected apiGatewayInstances: googleApiGatewayGateway.GoogleApiGatewayGateway[]
-  protected backendService: computeBackendService.ComputeBackendService
-  protected healthChecks: computeHealthCheck.ComputeHealthCheck[]
-  protected serverlessNegs: computeRegionNetworkEndpointGroup.ComputeRegionNetworkEndpointGroup[]
+  public readonly apiGateway: googleApiGatewayApi.GoogleApiGatewayApi
+  public readonly apiConfig: googleApiGatewayApiConfig.GoogleApiGatewayApiConfigA
+  public readonly apiGatewayInstance: googleApiGatewayGateway.GoogleApiGatewayGateway
+  public readonly serverlessNeg: googleComputeRegionNetworkEndpointGroup.GoogleComputeRegionNetworkEndpointGroup
 
-  constructor(scope: IngressStack, config: ApiGatewayConfig) {
-    super(scope, 'api-gateway', config)
+  constructor(scope: IngressStack, id: string, config: ApiGatewayConfig) {
+    super(scope, id, config)
 
-    // Create API Gateway
+    const openApiTpl = readFileSync(config.openApiTemplatePath, 'utf-8')
+
+    const openApiSpec = config.cloudRunServices.reduce(
+      (spec, service) =>
+        spec.replace(new RegExp(`\\$\\{${service.key}\\}`, 'g'), service.uri),
+      openApiTpl,
+    )
+
     this.apiGateway = new googleApiGatewayApi.GoogleApiGatewayApi(
       this,
-      this.id('api', 'gateway'),
+      this.id('api'),
       {
         apiId: this.id('api'),
-        displayName: config.apiGatewayConfig.displayName,
+        displayName: config.displayName,
         project: scope.hostProjectId,
       },
     )
 
     this.apiConfig = new googleApiGatewayApiConfig.GoogleApiGatewayApiConfigA(
       this,
-      this.id('api', 'config'),
+      this.id('config'),
       {
         api: this.apiGateway.apiId,
         apiConfigId: this.id('config'),
-        openapiDocuments: config.apiGatewayConfig.openapiDocuments.map(
-          (doc) => ({
+        openapiDocuments: [
+          {
             document: {
-              contents: doc.document.contents,
-              path: doc.document.path,
+              contents: Buffer.from(openApiSpec).toString('base64'),
+              path: 'openapi.yaml',
             },
-          }),
-        ),
+          },
+        ],
         project: scope.hostProjectId,
       },
     )
 
-    // Initialize arrays for region-specific resources
-    this.apiGatewayInstances = []
-    this.healthChecks = []
-    this.serverlessNegs = []
-
-    // Create region-specific resources in a single loop
-    for (const [index, region] of envConfig.regions.entries()) {
-      // Create API Gateway instance
-      const gateway = new googleApiGatewayGateway.GoogleApiGatewayGateway(
-        this,
-        `gateway-${index}`,
+    this.apiGatewayInstance = new googleApiGatewayGateway.GoogleApiGatewayGateway(
+      this,
+      this.id('gateway'),
         {
           apiConfig: this.apiConfig.id,
-          gatewayId: this.id('gateway', region),
+          gatewayId: this.id('gateway'),
           project: scope.hostProjectId,
-          region,
-          displayName: `${config.apiGatewayConfig.displayName} - ${region}`,
+          region: config.region,
+          displayName: `${config.displayName} - ${config.region}`,
         },
       )
-      this.apiGatewayInstances.push(gateway)
 
-      // Create health check
-      const healthCheck = new computeHealthCheck.ComputeHealthCheck(
+    this.serverlessNeg =
+      new googleComputeRegionNetworkEndpointGroup.GoogleComputeRegionNetworkEndpointGroup(
         this,
-        `health-check-${index}`,
+        this.id('neg'),
         {
-          name: this.id('health-check', region),
+          name: this.id('neg'),
+          networkEndpointType: 'SERVERLESS',
+          region: config.region,
           project: scope.hostProjectId,
-          httpHealthCheck: {
-            port: 80,
-            requestPath: '/health',
+          serverlessDeployment: {
+            platform: 'apigateway.googleapis.com',
+            resource: this.apiGatewayInstance.id,
           },
         },
       )
-      this.healthChecks.push(healthCheck)
 
-      // Create Serverless NEG
-      const neg =
-        new computeRegionNetworkEndpointGroup.ComputeRegionNetworkEndpointGroup(
-          this,
-          `neg-${index}`,
-          {
-            name: this.id('neg', region),
-            networkEndpointType: 'SERVERLESS',
-            region,
-            project: scope.hostProjectId,
-            cloudRun: {
-              service: gateway.name,
-            },
-          },
-        )
-      this.serverlessNegs.push(neg)
-    }
-
-    // Create a single backend service with all NEGs
-    this.backendService = new computeBackendService.ComputeBackendService(
-      this,
-      this.id('backend', 'service'),
-      {
-        name: this.id('backend-service'),
-        project: scope.hostProjectId,
-        healthChecks: this.healthChecks.map((check) => check.id),
-        loadBalancingScheme: 'EXTERNAL',
-        protocol: 'HTTP',
-        timeoutSec: 30,
-        portName: 'http',
-        backend: this.serverlessNegs.map((neg) => ({
-          group: neg.id,
-        })),
-      },
-    )
-
-    // Outputs
-    new TerraformOutput(this, 'api-gateway-id', {
-      value: this.apiGateway.apiId,
-    })
-
-    new TerraformOutput(this, 'backend-service-id', {
-      value: this.backendService.id,
-    })
-
-    new TerraformOutput(this, 'backend-service-name', {
-      value: this.backendService.name,
-    })
   }
 }
