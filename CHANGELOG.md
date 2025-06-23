@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.12.19](https://github.com/gcp-tools/cdktf/compare/v1.12.18...v1.12.19) (2025-06-23)
+
+### Bug Fixes
+
+* uses beta provider ([ff8aa23](https://github.com/gcp-tools/cdktf/commit/ff8aa23ac005fcdcb9dc7a683e6f7b5700b93bc8))
+
 ## [1.12.18](https://github.com/gcp-tools/cdktf/compare/v1.12.17...v1.12.18) (2025-06-23)
 
 ### Bug Fixes
