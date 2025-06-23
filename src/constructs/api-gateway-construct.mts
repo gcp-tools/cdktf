@@ -92,7 +92,7 @@ export class ApiGatewayConstruct extends BaseIngressConstruct<ApiGatewayConfig> 
       this.id('config'),
       {
         api: this.apiGateway.apiId,
-        apiConfigIdPrefix: `${this.id('config')}-`,
+        apiConfigIdPrefix: `${scope.shortName('config')}-`,
         openapiDocuments: [
           {
             document: {
