@@ -29,8 +29,10 @@ import {
   googleApiGatewayGateway,
   googleComputeRegionNetworkEndpointGroup,
 } from '@cdktf/provider-google-beta'
+import { ServiceAccountIamMember } from '@cdktf/provider-google/lib/service-account-iam-member/index.js'
 
 import { readFileSync } from 'node:fs'
+import { envConfig } from '../utils/env.mjs'
 import type { IngressStack } from '../stacks/ingress-stack.mjs'
 import { BaseIngressConstruct } from './base-ingress-construct.mjs'
 
@@ -64,6 +66,16 @@ export class ApiGatewayConstruct extends BaseIngressConstruct<ApiGatewayConfig> 
       openApiTpl,
     )
 
+    new ServiceAccountIamMember(
+      this,
+      this.id('deployer', 'act', 'as', 'ingress', 'sa'),
+      {
+        serviceAccountId: scope.stackServiceAccount.id,
+        role: 'roles/iam.serviceAccountUser',
+        member: `serviceAccount:${envConfig.deployerSaEmail}`,
+      },
+    )
+
     this.apiGateway = new googleApiGatewayApi.GoogleApiGatewayApi(
       this,
       this.id('api'),
@@ -89,6 +101,11 @@ export class ApiGatewayConstruct extends BaseIngressConstruct<ApiGatewayConfig> 
             },
           },
         ],
+        gatewayConfig: {
+          backendConfig: {
+            googleServiceAccount: scope.stackServiceAccount.email,
+          },
+        },
         project: scope.hostProjectId,
         provider: scope.googleBetaProvider,
       },
