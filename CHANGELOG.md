@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.12.23](https://github.com/gcp-tools/cdktf/compare/v1.12.22...v1.12.23) (2025-06-23)
+
+### Bug Fixes
+
+* updates api gateway construct template parsing ([2c4b8b5](https://github.com/gcp-tools/cdktf/commit/2c4b8b5ff8c1e36dca8eb9de4ef749b9f07f4b83))
+
 ## [1.12.22](https://github.com/gcp-tools/cdktf/compare/v1.12.21...v1.12.22) (2025-06-23)
 
 ### Bug Fixes
