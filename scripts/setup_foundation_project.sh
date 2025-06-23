@@ -126,6 +126,7 @@ ORGANIZATION_ROLES=(
   "roles/serviceusage.serviceUsageAdmin"
   "roles/resourcemanager.projectIamAdmin"
   "roles/storage.admin"
+  "roles/compute.admin"
   "roles/compute.networkAdmin"
   "roles/vpcaccess.admin"
   "roles/compute.xpnAdmin"
