@@ -138,7 +138,7 @@ export class ApiGatewayConstruct extends BaseIngressConstruct<ApiGatewayConfig> 
           project: scope.hostProjectId,
           serverlessDeployment: {
             platform: 'apigateway.googleapis.com',
-            resource: this.apiGatewayInstance.id,
+            resource: this.apiGatewayInstance.gatewayId,
           },
           provider: scope.googleBetaProvider,
         },
