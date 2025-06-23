@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.12.22](https://github.com/gcp-tools/cdktf/compare/v1.12.21...v1.12.22) (2025-06-23)
+
+### Bug Fixes
+
+* adds binding to depends on ([c061f1e](https://github.com/gcp-tools/cdktf/commit/c061f1ec26e76f4ff6b08da45d38f02fd39cc7dd))
+
 ## [1.12.21](https://github.com/gcp-tools/cdktf/compare/v1.12.20...v1.12.21) (2025-06-23)
 
 ### Bug Fixes
