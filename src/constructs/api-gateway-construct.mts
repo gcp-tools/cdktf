@@ -30,8 +30,7 @@ import {
   googleComputeRegionNetworkEndpointGroup,
 } from '@cdktf/provider-google-beta'
 import { ServiceAccountIamMember } from '@cdktf/provider-google/lib/service-account-iam-member/index.js'
-
-import { readFileSync } from 'node:fs'
+import { Fn } from 'cdktf'
 import { envConfig } from '../utils/env.mjs'
 import type { IngressStack } from '../stacks/ingress-stack.mjs'
 import { BaseIngressConstruct } from './base-ingress-construct.mjs'
@@ -58,8 +57,6 @@ export class ApiGatewayConstruct extends BaseIngressConstruct<ApiGatewayConfig> 
   constructor(scope: IngressStack, id: string, config: ApiGatewayConfig) {
     super(scope, id, config)
 
-    const openApiTpl = readFileSync(config.openApiTemplatePath, 'utf-8')
-
     const deployerActAsIngressSa = new ServiceAccountIamMember(
       this,
       this.id('deployer', 'act', 'as', 'ingress', 'sa'),
@@ -69,12 +66,6 @@ export class ApiGatewayConstruct extends BaseIngressConstruct<ApiGatewayConfig> 
         member: `serviceAccount:${envConfig.deployerSaEmail}`,
         provider: scope.googleProvider,
       },
-    )
-
-    const openApiSpec = config.cloudRunServices.reduce(
-      (spec, service) =>
-        spec.replace(new RegExp(`\\$\\{${service.key}\\}`, 'g'), service.uri),
-      openApiTpl,
     )
 
     this.apiGateway = new googleApiGatewayApi.GoogleApiGatewayApi(
@@ -88,6 +79,14 @@ export class ApiGatewayConstruct extends BaseIngressConstruct<ApiGatewayConfig> 
       },
     )
 
+    const templateVars = config.cloudRunServices.reduce(
+      (acc, service) => {
+        acc[service.key] = service.uri
+        return acc
+      },
+      {} as Record<string, string>,
+    )
+
     this.apiConfig = new googleApiGatewayApiConfig.GoogleApiGatewayApiConfigA(
       this,
       this.id('config'),
@@ -97,7 +96,9 @@ export class ApiGatewayConstruct extends BaseIngressConstruct<ApiGatewayConfig> 
         openapiDocuments: [
           {
             document: {
-              contents: Buffer.from(openApiSpec).toString('base64'),
+              contents: Fn.base64encode(
+                Fn.templatefile(config.openApiTemplatePath, templateVars),
+              ),
               path: 'openapi.yaml',
             },
           },
