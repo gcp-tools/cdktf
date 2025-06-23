@@ -90,6 +90,7 @@ export class ApiGatewayConstruct extends BaseIngressConstruct<ApiGatewayConfig> 
           },
         ],
         project: scope.hostProjectId,
+        provider: scope.googleBetaProvider,
       },
     )
 
@@ -102,6 +103,7 @@ export class ApiGatewayConstruct extends BaseIngressConstruct<ApiGatewayConfig> 
           project: scope.hostProjectId,
           region: config.region,
           displayName: `${config.displayName} - ${config.region}`,
+          provider: scope.googleBetaProvider,
         },
       )
 
@@ -118,6 +120,7 @@ export class ApiGatewayConstruct extends BaseIngressConstruct<ApiGatewayConfig> 
             platform: 'apigateway.googleapis.com',
             resource: this.apiGatewayInstance.id,
           },
+          provider: scope.googleBetaProvider,
         },
       )
 
