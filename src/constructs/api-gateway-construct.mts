@@ -71,6 +71,7 @@ export class ApiGatewayConstruct extends BaseIngressConstruct<ApiGatewayConfig> 
         apiId: this.id('api'),
         displayName: config.displayName,
         project: scope.hostProjectId,
+        provider: scope.googleBetaProvider,
       },
     )
 

@@ -48,11 +48,14 @@ export class IngressStack extends BaseStack<BaseStackConfig> {
     this.hostProjectId = hostProjectRemoteState.getString('project-id')
     this.hostProjectNumber = hostProjectRemoteState.getString('project-number')
 
-    const serviceAccountId = this.id('sa', 'ingress')
-    this.stackServiceAccount = new ServiceAccount(this, serviceAccountId, {
-      accountId: serviceAccountId,
-      project: this.hostProjectId,
-      description: 'Service account for ingress resources',
-    })
+    this.stackServiceAccount = new ServiceAccount(
+      this,
+      this.id('sa', 'ingress'),
+      {
+        accountId: this.shortName('sa'),
+        project: this.hostProjectId,
+        description: 'Service account for ingress resources',
+      },
+    )
   }
 }
