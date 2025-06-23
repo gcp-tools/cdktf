@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.12.21](https://github.com/gcp-tools/cdktf/compare/v1.12.20...v1.12.21) (2025-06-23)
+
+### Bug Fixes
+
+* grants permissions to correct service account. allegedly. ([3665c61](https://github.com/gcp-tools/cdktf/commit/3665c6110bde9885c6dd8cd08ff5f13f7772d4dd))
+
 ## [1.12.20](https://github.com/gcp-tools/cdktf/compare/v1.12.19...v1.12.20) (2025-06-23)
 
 ### Bug Fixes
