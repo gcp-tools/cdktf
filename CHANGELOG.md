@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.12.18](https://github.com/gcp-tools/cdktf/compare/v1.12.17...v1.12.18) (2025-06-23)
+
+### Bug Fixes
+
+* simplifies api gateway construct ([26f731d](https://github.com/gcp-tools/cdktf/commit/26f731d3759e3c9f5c4fc9f14a9cc8d286682d22))
+
 ## [1.12.17](https://github.com/gcp-tools/cdktf/compare/v1.12.16...v1.12.17) (2025-06-22)
 
 ### Bug Fixes
