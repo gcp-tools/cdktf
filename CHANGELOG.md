@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.12.28](https://github.com/gcp-tools/cdktf/compare/v1.12.27...v1.12.28) (2025-06-23)
+
+### Bug Fixes
+
+* sets update policy for api gateway ([209785e](https://github.com/gcp-tools/cdktf/commit/209785ee0ddf99b3f2482d493661d7d337396d12))
+
 ## [1.12.27](https://github.com/gcp-tools/cdktf/compare/v1.12.26...v1.12.27) (2025-06-23)
 
 ### Bug Fixes
