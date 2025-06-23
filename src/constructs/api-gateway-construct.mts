@@ -60,20 +60,21 @@ export class ApiGatewayConstruct extends BaseIngressConstruct<ApiGatewayConfig> 
 
     const openApiTpl = readFileSync(config.openApiTemplatePath, 'utf-8')
 
-    const openApiSpec = config.cloudRunServices.reduce(
-      (spec, service) =>
-        spec.replace(new RegExp(`\\$\\{${service.key}\\}`, 'g'), service.uri),
-      openApiTpl,
-    )
-
-    new ServiceAccountIamMember(
+    const deployerActAsIngressSa = new ServiceAccountIamMember(
       this,
       this.id('deployer', 'act', 'as', 'ingress', 'sa'),
       {
         serviceAccountId: scope.stackServiceAccount.id,
         role: 'roles/iam.serviceAccountUser',
         member: `serviceAccount:${envConfig.deployerSaEmail}`,
+        provider: scope.googleProvider,
       },
+    )
+
+    const openApiSpec = config.cloudRunServices.reduce(
+      (spec, service) =>
+        spec.replace(new RegExp(`\\$\\{${service.key}\\}`, 'g'), service.uri),
+      openApiTpl,
     )
 
     this.apiGateway = new googleApiGatewayApi.GoogleApiGatewayApi(
@@ -108,6 +109,7 @@ export class ApiGatewayConstruct extends BaseIngressConstruct<ApiGatewayConfig> 
         },
         project: scope.hostProjectId,
         provider: scope.googleBetaProvider,
+        dependsOn: [deployerActAsIngressSa],
       },
     )
 
