@@ -111,6 +111,9 @@ export class ApiGatewayConstruct extends BaseIngressConstruct<ApiGatewayConfig> 
         project: scope.hostProjectId,
         provider: scope.googleBetaProvider,
         dependsOn: [deployerActAsIngressSa],
+        lifecycle: {
+          createBeforeDestroy: true,
+        },
       },
     )
 
