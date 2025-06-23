@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.12.25](https://github.com/gcp-tools/cdktf/compare/v1.12.24...v1.12.25) (2025-06-23)
+
+### Bug Fixes
+
+* updates api gateway ref ([195b86a](https://github.com/gcp-tools/cdktf/commit/195b86ad918d062a0b2e3955ce8871e4d4327d8b))
+
 ## [1.12.24](https://github.com/gcp-tools/cdktf/compare/v1.12.23...v1.12.24) (2025-06-23)
 
 ### Bug Fixes
