@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.12.24](https://github.com/gcp-tools/cdktf/compare/v1.12.23...v1.12.24) (2025-06-23)
+
+### Bug Fixes
+
+* updates deployer roles ([324b186](https://github.com/gcp-tools/cdktf/commit/324b18697eb4908cde6d23eb9f4bb1a0f854531c))
+
 ## [1.12.23](https://github.com/gcp-tools/cdktf/compare/v1.12.22...v1.12.23) (2025-06-23)
 
 ### Bug Fixes

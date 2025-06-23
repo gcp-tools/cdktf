@@ -4,7 +4,7 @@
   "description": "GCP Tools | project | infrastructure",
   "license": "Apache-2.0",
   "type": "module",
-  "version": "1.12.23",
+  "version": "1.12.24",
   "exports": {
     "./constructs": {
       "default": "./dist/constructs/index.mjs",
