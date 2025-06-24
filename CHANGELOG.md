@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.12.29](https://github.com/gcp-tools/cdktf/compare/v1.12.28...v1.12.29) (2025-06-24)
+
+### Bug Fixes
+
+* updates env var name ([bd70711](https://github.com/gcp-tools/cdktf/commit/bd70711943b528ebacf748cc1a86b51b3e686884))
+
 ## [1.12.28](https://github.com/gcp-tools/cdktf/compare/v1.12.27...v1.12.28) (2025-06-23)
 
 ### Bug Fixes
