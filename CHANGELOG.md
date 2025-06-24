@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.12.30](https://github.com/gcp-tools/cdktf/compare/v1.12.29...v1.12.30) (2025-06-24)
+
+### Bug Fixes
+
+* updates env var project id to project name ([037ce8a](https://github.com/gcp-tools/cdktf/commit/037ce8af200211476e6baa77e95e2b6df43214c8))
+
 ## [1.12.29](https://github.com/gcp-tools/cdktf/compare/v1.12.28...v1.12.29) (2025-06-24)
 
 ### Bug Fixes
