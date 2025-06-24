@@ -30,7 +30,7 @@ export const envSchema = z.object({
   GCP_TOOLS_REGIONS: arraySchema,
   GCP_TOOLS_TERRAFORM_REMOTE_STATE_BUCKET_ID: z.string(),
   GCP_TOOLS_USER: z.string(),
-  GCP_TOOLS_PROJECT_ID: z.string(),
+  GCP_TOOLS_PROJECT_NAME: z.string(),
   GCP_TOOLS_FOUNDATION_PROJECT_ID: z.string(),
   GCP_TOOLS_FOUNDATION_PROJECT_NUMBER: z.string(),
   GCP_TOOLS_GITHUB_IDENTITY_SPECIFIER: z.string(),
@@ -48,7 +48,7 @@ export type EnvConfig = {
   orgId: string
   owners: string[]
   user: string
-  projectId: string
+  projectName: string
   foundationProjectId: string
   foundationProjectNumber: string
   githubIdentitySpecifier: string
@@ -73,7 +73,7 @@ export const envConfig: EnvConfig = {
   environment: envVars.GCP_TOOLS_ENVIRONMENT,
   orgId: envVars.GCP_TOOLS_ORG_ID,
   owners: envVars.GCP_TOOLS_OWNER_EMAILS,
-  projectId: envVars.GCP_TOOLS_PROJECT_ID,
+  projectName: envVars.GCP_TOOLS_PROJECT_NAME,
   regions: envVars.GCP_TOOLS_REGIONS,
   user: envVars.GCP_TOOLS_USER,
   foundationProjectId: envVars.GCP_TOOLS_FOUNDATION_PROJECT_ID,
