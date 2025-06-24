@@ -44,7 +44,7 @@ PROJECT_ROOT=$( cd -- "$(dirname -- "${SCRIPT_DIR}")" &> /dev/null && pwd )
 
 # --- 2. Gather User Inputs ---
 echo "### Step 2: Gathering Required Information ###"
-prompt_required "Enter the GCP Project ID" GCP_TOOLS_PROJECT_ID
+prompt_required "Enter the GCP Project ID" GCP_TOOLS_PROJECT_NAME
 prompt_required "Enter the Foundation GCP Project ID" GCP_TOOLS_FOUNDATION_PROJECT_ID
 prompt_required "Enter your GCP Organization ID" GCP_TOOLS_ORG_ID
 prompt_required "Enter your GCP Billing Account ID" GCP_TOOLS_BILLING_ACCOUNT
@@ -80,10 +80,10 @@ if [ -z "${GCP_TOOLS_FOUNDATION_PROJECT_NUMBER}" ]; then
 fi
 echo "Found Project Number: ${GCP_TOOLS_FOUNDATION_PROJECT_NUMBER}"
 
-SERVICE_ACCOUNT_NAME="${GCP_TOOLS_PROJECT_ID}-sa"
+SERVICE_ACCOUNT_NAME="${GCP_TOOLS_PROJECT_NAME}-sa"
 SERVICE_ACCOUNT_EMAIL="${SERVICE_ACCOUNT_NAME}@${GCP_TOOLS_FOUNDATION_PROJECT_ID}.iam.gserviceaccount.com"
 GCP_TOOLS_TERRAFORM_REMOTE_STATE_BUCKET_ID="${GCP_TOOLS_FOUNDATION_PROJECT_ID}-terraform-state"
-DEV_POOL_ID="${GCP_TOOLS_PROJECT_ID}-dev-pool"
+DEV_POOL_ID="${GCP_TOOLS_PROJECT_NAME}-dev-pool"
 LOCAL_DEV_PROVIDER_ID="local-developer-provider"
 
 # Find gcloud path. This is more robust than assuming a fixed path.
@@ -115,7 +115,7 @@ sed -e "s|<GCP_TOOLS_BILLING_ACCOUNT>|${GCP_TOOLS_BILLING_ACCOUNT}|g" \
     -e "s|<GCP_TOOLS_GITHUB_IDENTITY_SPECIFIER>|${GCP_TOOLS_GITHUB_IDENTITY_SPECIFIER}|g" \
     -e "s|<GCP_TOOLS_ORG_ID>|${GCP_TOOLS_ORG_ID}|g" \
     -e "s|<GCP_TOOLS_OWNER_EMAILS>|${GCP_TOOLS_OWNER_EMAILS}|g" \
-    -e "s|<GCP_TOOLS_PROJECT_ID>|${GCP_TOOLS_PROJECT_ID}|g" \
+    -e "s|<GCP_TOOLS_PROJECT_NAME>|${GCP_TOOLS_PROJECT_NAME}|g" \
     -e "s|<GCP_TOOLS_REGIONS>|${GCP_TOOLS_REGIONS}|g" \
     -e "s|<GCP_TOOLS_TERRAFORM_REMOTE_STATE_BUCKET_ID>|${GCP_TOOLS_TERRAFORM_REMOTE_STATE_BUCKET_ID}|g" \
     -e "s|<GCP_TOOLS_USER>|${GCP_TOOLS_USER}|g" \

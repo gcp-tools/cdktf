@@ -11,8 +11,8 @@ echo "### Step 0: Validating Environment Variables ###"
 # Prompt for environment variables if they are not set.
 # The `:-""` is used to avoid issues with `set -u` (treat unset variables as an error).
 
-if [ -z "${GCP_TOOLS_PROJECT_ID:-}" ]; then
-  read -p "Enter your GCP PROJECT ID (eg., 'platform' | 'web-app'): " GCP_TOOLS_PROJECT_ID
+if [ -z "${GCP_TOOLS_PROJECT_NAME:-}" ]; then
+  read -p "Enter your GCP PROJECT NAME (eg., 'platform' | 'web-app'): " GCP_TOOLS_PROJECT_NAME
 fi
 
 
@@ -37,23 +37,23 @@ if [ -z "${GCP_TOOLS_DEVELOPER_IDENTITY_SPECIFIER:-}" ]; then
 fi
 
 # Final check to ensure variables are now set.
-if [ -z "${GCP_TOOLS_PROJECT_ID}" ]; then echo "Error: GCP_TOOLS_PROJECT_ID is not set."; exit 1; fi
+if [ -z "${GCP_TOOLS_PROJECT_NAME}" ]; then echo "Error: GCP_TOOLS_PROJECT_NAME is not set."; exit 1; fi
 if [ -z "${GCP_TOOLS_ORG_ID}" ]; then echo "Error: GCP_TOOLS_ORG_ID is not set."; exit 1; fi
 if [ -z "${GCP_TOOLS_BILLING_ACCOUNT}" ]; then echo "Error: GCP_TOOLS_BILLING_ACCOUNT is not set."; exit 1; fi
 if [ -z "${GCP_DEFAULT_REGION}" ]; then echo "Error: GCP_DEFAULT_REGION is not set."; exit 1; fi
 if [ -z "${GCP_TOOLS_GITHUB_IDENTITY_SPECIFIER}" ]; then echo "Error: GCP_TOOLS_GITHUB_IDENTITY_SPECIFIER is not set."; exit 1; fi
 if [ -z "${GCP_TOOLS_DEVELOPER_IDENTITY_SPECIFIER}" ]; then echo "Error: GCP_TOOLS_DEVELOPER_IDENTITY_SPECIFIER is not set."; exit 1; fi
 
-PROJECT_ID_BASE="${GCP_TOOLS_PROJECT_ID}-foundation"
+PROJECT_ID_BASE="${GCP_TOOLS_PROJECT_NAME}-foundation"
 # Generate a unique project ID using a timestamp
 PROJECT_ID="${PROJECT_ID_BASE}-$(date +%s)"
-SERVICE_ACCOUNT_NAME="${GCP_TOOLS_PROJECT_ID}-sa"
+SERVICE_ACCOUNT_NAME="${GCP_TOOLS_PROJECT_NAME}-sa"
 SERVICE_ACCOUNT_EMAIL="${SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
 
-DEV_POOL_ID="${GCP_TOOLS_PROJECT_ID}-dev-pool"
-TEST_POOL_ID="${GCP_TOOLS_PROJECT_ID}-test-pool"
-SBX_POOL_ID="${GCP_TOOLS_PROJECT_ID}-sbx-pool"
-PROD_POOL_ID="${GCP_TOOLS_PROJECT_ID}-prod-pool"
+DEV_POOL_ID="${GCP_TOOLS_PROJECT_NAME}-dev-pool"
+TEST_POOL_ID="${GCP_TOOLS_PROJECT_NAME}-test-pool"
+SBX_POOL_ID="${GCP_TOOLS_PROJECT_NAME}-sbx-pool"
+PROD_POOL_ID="${GCP_TOOLS_PROJECT_NAME}-prod-pool"
 
 GITHUB_PROVIDER_ID="github-actions-provider"
 LOCAL_DEV_PROVIDER_ID="local-developer-provider"
@@ -198,8 +198,8 @@ create_github_provider() {
   gcloud iam workload-identity-pools create "${pool_id}" \
     --project="${PROJECT_ID}" \
     --location="global" \
-    --display-name="${GCP_TOOLS_PROJECT_ID}-${pool_display_name_suffix}-pool" \
-    --description="Pool for ${GCP_TOOLS_PROJECT_ID}-${pool_display_name_suffix} environment"
+    --display-name="${GCP_TOOLS_PROJECT_NAME}-${pool_display_name_suffix}-pool" \
+    --description="Pool for ${GCP_TOOLS_PROJECT_NAME}-${pool_display_name_suffix} environment"
 
   echo "Creating GitHub Provider for Pool: ${pool_id}"
   gcloud iam workload-identity-pools providers create-oidc "${GITHUB_PROVIDER_ID}" \
