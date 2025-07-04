@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.13.0](https://github.com/gcp-tools/cdktf/compare/v1.12.30...v1.13.0) (2025-07-04)
+
+### Features
+
+* updates cloud run construct map to driectory services/service_name/component_name ([9d8cc90](https://github.com/gcp-tools/cdktf/commit/9d8cc90a12a2863c4d23786b9e9e52a3aa137281))
+
 ## [1.12.30](https://github.com/gcp-tools/cdktf/compare/v1.12.29...v1.12.30) (2025-06-24)
 
 ### Bug Fixes
