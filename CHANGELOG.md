@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.14.0](https://github.com/gcp-tools/cdktf/compare/v1.13.0...v1.14.0) (2025-07-04)
+
+### Features
+
+* updates package-lock ([ce84741](https://github.com/gcp-tools/cdktf/commit/ce847412a4593cc0f3f57b51ad7f4315125ac882))
+
 ## [1.13.0](https://github.com/gcp-tools/cdktf/compare/v1.12.30...v1.13.0) (2025-07-04)
 
 ### Features
