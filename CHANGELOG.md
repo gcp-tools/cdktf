@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.14.1](https://github.com/gcp-tools/cdktf/compare/v1.14.0...v1.14.1) (2025-07-04)
+
+### Bug Fixes
+
+* removes project name from stack id unless it is a prjiect stack; should work? ([795326e](https://github.com/gcp-tools/cdktf/commit/795326ee025e41c004883ea4bcc95655185df9d8))
+
 ## [1.14.0](https://github.com/gcp-tools/cdktf/compare/v1.13.0...v1.14.0) (2025-07-04)
 
 ### Features
