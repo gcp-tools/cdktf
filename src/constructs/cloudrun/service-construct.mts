@@ -83,7 +83,7 @@ export class CloudRunServiceConstruct extends BaseAppConstruct<CloudRunServiceCo
     } = serviceConfig
 
     const serviceId = this.id('service')
-    const sourceDir = resolve(sourceDirectory, scope.stackId)
+    const sourceDir = resolve(sourceDirectory, scope.stackId, id)
     const dockerfile = 'Dockerfile'
 
     // --- Source Hash Computation ---
