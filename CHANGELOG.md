@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.14.2](https://github.com/gcp-tools/cdktf/compare/v1.14.1...v1.14.2) (2025-07-05)
+
+### Documentation
+
+* updates readme ([cda8634](https://github.com/gcp-tools/cdktf/commit/cda86345e576e5818214b2bcd928ee330ca1965e))
+
 ## [1.14.1](https://github.com/gcp-tools/cdktf/compare/v1.14.0...v1.14.1) (2025-07-04)
 
 ### Bug Fixes
