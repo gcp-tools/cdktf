@@ -25,6 +25,7 @@ import { LocalExec } from 'cdktf-local-exec'
 import type { AppStack } from '../../stacks/app-stack.mjs'
 import { envConfig } from '../../utils/env.mjs'
 import { BaseAppConstruct } from '../base-app-construct.mjs'
+import { StringResource } from '@cdktf/provider-random/lib/string-resource/index.js'
 
 const sourceDirectory = resolve(cwd(), '..', '..', 'services')
 
@@ -158,7 +159,15 @@ export class CloudRunServiceConstruct extends BaseAppConstruct<CloudRunServiceCo
     })
 
     // --- Source Code Storage ---
-    const bucketId = this.id('source-bucket')
+    const bucketId = `${this.id('source-bucket')}-${
+      new StringResource(this, this.id('random', 'id'), {
+        length: 6,
+        lower: true,
+        upper: false,
+        numeric: true,
+        special: false,
+      }).id
+    }`
     const bucket = new StorageBucket(this, bucketId, {
       name: bucketId,
       location: region,

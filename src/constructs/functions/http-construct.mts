@@ -13,6 +13,7 @@ import { StorageBucket } from '@cdktf/provider-google/lib/storage-bucket/index.j
 import type { ITerraformDependable } from 'cdktf'
 import type { AppStack } from '../../stacks/app-stack.mjs'
 import { BaseAppConstruct } from '../base-app-construct.mjs'
+import { StringResource } from '@cdktf/provider-random/lib/string-resource/index.js'
 const sourceDirectory = resolve(cwd(), '..', 'services')
 
 export type HttpConstructConfig = {
@@ -38,7 +39,15 @@ export class HttpConstruct<
 
     const sourceDir = resolve(sourceDirectory, scope.stackId, id, 'dist')
 
-    const bucketId = this.id('source', 'code')
+    const bucketId = `${this.id('source', 'code')}-${
+      new StringResource(this, this.id('random', 'id'), {
+        length: 6,
+        lower: true,
+        upper: false,
+        numeric: true,
+        special: false,
+      }).id
+    }`
     this.bucket = new StorageBucket(this, bucketId, {
       dependsOn: [scope.stackServiceAccount, ...(config.dependsOn || [])],
       forceDestroy: true,

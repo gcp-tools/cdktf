@@ -63,9 +63,9 @@ export class BaseStack<T extends BaseStackConfig> extends TerraformStack {
       return `${envConfig.projectName}${delimiter}${environment}${delimiter}${this.stackId}`
     }
     if (this.stackType === 'app' && user !== 'ci') {
-      return `${user}${delimiter}${this.stackType}${delimiter}${this.stackId}`
+      return `${envConfig.projectName}${delimiter}${user}${delimiter}${this.stackType}${delimiter}${this.stackId}`
     }
-    return `${environment}${delimiter}${this.stackType}${delimiter}${this.stackId}`
+    return `${envConfig.projectName}${delimiter}${environment}${delimiter}${this.stackType}${delimiter}${this.stackId}`
   }
 
   remotePrefix(stackType: string, remoteId: string) {
