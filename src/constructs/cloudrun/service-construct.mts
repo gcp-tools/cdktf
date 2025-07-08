@@ -19,13 +19,13 @@ import { ServiceAccount } from '@cdktf/provider-google/lib/service-account/index
 import { StorageBucketIamBinding } from '@cdktf/provider-google/lib/storage-bucket-iam-binding/index.js'
 import { StorageBucketObject } from '@cdktf/provider-google/lib/storage-bucket-object/index.js'
 import { StorageBucket } from '@cdktf/provider-google/lib/storage-bucket/index.js'
+import { StringResource } from '@cdktf/provider-random/lib/string-resource/index.js'
 import { Sleep } from '@cdktf/provider-time/lib/sleep/index.js'
 import type { ITerraformDependable } from 'cdktf'
 import { LocalExec } from 'cdktf-local-exec'
 import type { AppStack } from '../../stacks/app-stack.mjs'
 import { envConfig } from '../../utils/env.mjs'
 import { BaseAppConstruct } from '../base-app-construct.mjs'
-import { StringResource } from '@cdktf/provider-random/lib/string-resource/index.js'
 
 const sourceDirectory = resolve(cwd(), '..', '..', 'services')
 
@@ -90,7 +90,7 @@ export class CloudRunServiceConstruct extends BaseAppConstruct<CloudRunServiceCo
     // --- Source Hash Computation ---
     // Compute a hash of all source files to detect changes automatically
     // Uses include-first approach to automatically detect any source files
-    const sourceHashStep = new LocalExec(this, this.id('source-hash'), {
+    const sourceHashStep = new LocalExec(this, this.id('source', 'hash'), {
       command: `
         cd "${sourceDir}" && \
         find . -type f \
@@ -159,7 +159,7 @@ export class CloudRunServiceConstruct extends BaseAppConstruct<CloudRunServiceCo
     })
 
     // --- Source Code Storage ---
-    const bucketId = `${this.id('source-bucket')}-${
+    const bucketId = `${this.id('source', 'code')}-${
       new StringResource(this, this.id('random', 'id'), {
         length: 6,
         lower: true,
@@ -168,14 +168,14 @@ export class CloudRunServiceConstruct extends BaseAppConstruct<CloudRunServiceCo
         special: false,
       }).id
     }`
-    const bucket = new StorageBucket(this, bucketId, {
+    const bucket = new StorageBucket(this, this.id('source', 'code'), {
       name: bucketId,
       location: region,
       project: scope.projectId,
       forceDestroy: true,
       uniformBucketLevelAccess: true,
     })
-    const archiveFile = new DataArchiveFile(this, this.id('archive-file'), {
+    const archiveFile = new DataArchiveFile(this, this.id('archive', 'file'), {
       type: 'zip',
       sourceDir,
       outputPath: resolve(
@@ -196,21 +196,25 @@ export class CloudRunServiceConstruct extends BaseAppConstruct<CloudRunServiceCo
     })
 
     // Grant the custom Cloud Build service account permission to write to the repo.
-    new ProjectIamMember(this, this.id('cloudbuild-registry-writer'), {
+    new ProjectIamMember(this, this.id('cloudbuild', 'registry', 'writer'), {
       project: scope.projectId,
       role: 'roles/artifactregistry.writer',
       member: buildServiceAccount.member,
       dependsOn: [repository],
     })
 
-    new StorageBucketIamBinding(this, this.id('cloudbuild-bucket-reader'), {
-      bucket: bucket.name,
-      members: [buildServiceAccount.member],
-      role: 'roles/storage.objectViewer',
-    })
+    new StorageBucketIamBinding(
+      this,
+      this.id('cloudbuild', 'bucket', 'reader'),
+      {
+        bucket: bucket.name,
+        members: [buildServiceAccount.member],
+        role: 'roles/storage.objectViewer',
+      },
+    )
 
     // Grant the custom Cloud Build service account permission to write logs.
-    new ProjectIamMember(this, this.id('cloudbuild-logs-writer'), {
+    new ProjectIamMember(this, this.id('cloudbuild', 'logs', 'writer'), {
       project: scope.projectId,
       role: 'roles/logging.logWriter',
       member: buildServiceAccount.member,
@@ -218,7 +222,7 @@ export class CloudRunServiceConstruct extends BaseAppConstruct<CloudRunServiceCo
 
     const deployerBinding = new ServiceAccountIamBinding(
       this,
-      this.id('deployer-sa-user'),
+      this.id('deployer', 'sa', 'user'),
       {
         serviceAccountId: scope.stackServiceAccount.id,
         role: 'roles/iam.serviceAccountUser',
@@ -293,7 +297,7 @@ EOF
 
       gcloud builds submit --quiet --no-source --config="$CLOUDBUILD_CONFIG" --project=${scope.projectId} --billing-project=${scope.projectId}
     `
-    const buildStep = new LocalExec(this, this.id('build-step'), {
+    const buildStep = new LocalExec(this, this.id('build', 'step'), {
       dependsOn: [deployerActAsBuildSa, archive, archiveFile],
       command: buildScript,
       triggers: {
@@ -304,7 +308,7 @@ EOF
 
     const imagePropagationDelay = new Sleep(
       this,
-      this.id('image-propagation-delay'),
+      this.id('image', 'propagation', 'delay'),
       {
         createDuration: '30s',
         dependsOn: [buildStep],
@@ -360,7 +364,7 @@ EOF
     })
 
     // --- Service Invoker IAM ---
-    new CloudRunServiceIamBinding(this, this.id('binding-invoker'), {
+    new CloudRunServiceIamBinding(this, this.id('binding', 'invoker'), {
       location: region,
       project: scope.projectId,
       service: this.service.name,

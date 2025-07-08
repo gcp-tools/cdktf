@@ -35,7 +35,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "npm run clean && tsc --pretty",
+    "build": "tsc --pretty",
     "clean": "rm -rf coverage dist",
     "lint": "biome check src --write",
     "prepare": "husky",

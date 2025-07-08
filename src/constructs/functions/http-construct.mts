@@ -10,10 +10,10 @@ import type {
 import { StorageBucketIamBinding } from '@cdktf/provider-google/lib/storage-bucket-iam-binding/index.js'
 import { StorageBucketObject } from '@cdktf/provider-google/lib/storage-bucket-object/index.js'
 import { StorageBucket } from '@cdktf/provider-google/lib/storage-bucket/index.js'
+import { StringResource } from '@cdktf/provider-random/lib/string-resource/index.js'
 import type { ITerraformDependable } from 'cdktf'
 import type { AppStack } from '../../stacks/app-stack.mjs'
 import { BaseAppConstruct } from '../base-app-construct.mjs'
-import { StringResource } from '@cdktf/provider-random/lib/string-resource/index.js'
 const sourceDirectory = resolve(cwd(), '..', 'services')
 
 export type HttpConstructConfig = {
@@ -48,7 +48,7 @@ export class HttpConstruct<
         special: false,
       }).id
     }`
-    this.bucket = new StorageBucket(this, bucketId, {
+    this.bucket = new StorageBucket(this, this.id('source', 'code'), {
       dependsOn: [scope.stackServiceAccount, ...(config.dependsOn || [])],
       forceDestroy: true,
       location: config.region,

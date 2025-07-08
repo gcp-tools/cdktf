@@ -31,8 +31,8 @@ import {
 } from '@cdktf/provider-google-beta'
 import { ServiceAccountIamMember } from '@cdktf/provider-google/lib/service-account-iam-member/index.js'
 import { Fn } from 'cdktf'
-import { envConfig } from '../utils/env.mjs'
 import type { IngressStack } from '../stacks/ingress-stack.mjs'
+import { envConfig } from '../utils/env.mjs'
 import { BaseIngressConstruct } from './base-ingress-construct.mjs'
 
 export type CloudRunServiceConfig = {
@@ -117,9 +117,10 @@ export class ApiGatewayConstruct extends BaseIngressConstruct<ApiGatewayConfig> 
       },
     )
 
-    this.apiGatewayInstance = new googleApiGatewayGateway.GoogleApiGatewayGateway(
-      this,
-      this.id('gateway'),
+    this.apiGatewayInstance =
+      new googleApiGatewayGateway.GoogleApiGatewayGateway(
+        this,
+        this.id('gateway'),
         {
           apiConfig: this.apiConfig.id,
           gatewayId: this.id('gateway'),
@@ -146,6 +147,5 @@ export class ApiGatewayConstruct extends BaseIngressConstruct<ApiGatewayConfig> 
           provider: scope.googleBetaProvider,
         },
       )
-
   }
 }
