@@ -154,6 +154,7 @@ export class NetworkInfraStack extends BaseInfraStack<NetworkInfraStackConfig> {
         name: this.id('private', 'secondary', 'ip'),
         network: this.vpc.id,
         project: hostProjectId,
+        privateIpGoogleAccess: true,
       },
     )
 

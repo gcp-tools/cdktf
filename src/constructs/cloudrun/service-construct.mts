@@ -49,6 +49,7 @@ export type CloudRunServiceConstructConfig = {
     containerConcurrency?: number
     timeoutSeconds?: number
     imageRetentionCount?: number
+    egress?: 'ALL_TRAFFIC' | 'PRIVATE_RANGES_ONLY'
   }
 }
 
@@ -81,6 +82,7 @@ export class CloudRunServiceConstruct extends BaseAppConstruct<CloudRunServiceCo
       containerConcurrency = 80,
       timeoutSeconds = 60,
       imageRetentionCount = 10,
+      egress = 'PRIVATE_RANGES_ONLY',
     } = serviceConfig
 
     const serviceId = this.id('service')
@@ -325,7 +327,7 @@ EOF
         scaling: { minInstanceCount: minScale, maxInstanceCount: maxScale },
         vpcAccess: {
           connector: scope.vpcConnectorId,
-          egress: 'ALL_TRAFFIC',
+          egress,
         },
         maxInstanceRequestConcurrency: containerConcurrency,
         timeout: `${timeoutSeconds}s`,
