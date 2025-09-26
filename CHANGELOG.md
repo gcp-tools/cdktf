@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.14.5](https://github.com/gcp-tools/cdktf/compare/v1.14.4...v1.14.5) (2025-09-26)
+
+### Bug Fixes
+
+* improves networking ([9c11024](https://github.com/gcp-tools/cdktf/commit/9c11024be2dc25afd420f0e98872680c284030b2))
+
 ## [1.14.4](https://github.com/gcp-tools/cdktf/compare/v1.14.3...v1.14.4) (2025-07-08)
 
 ### Bug Fixes
