@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.14.6](https://github.com/gcp-tools/cdktf/compare/v1.14.5...v1.14.6) (2025-09-27)
+
+### Bug Fixes
+
+* makes the vpc connector optional ([e45e872](https://github.com/gcp-tools/cdktf/commit/e45e872014d62c3386a723f490ce1e1b18e7589d))
+
 ## [1.14.5](https://github.com/gcp-tools/cdktf/compare/v1.14.4...v1.14.5) (2025-09-26)
 
 ### Bug Fixes
