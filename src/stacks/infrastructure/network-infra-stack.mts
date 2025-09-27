@@ -65,7 +65,7 @@ type Scaling =
 export type NetworkInfraStackConfig = {
   subnetworkCidr: string
   connectorCidr: string
-  scaling: Scaling
+  scaling?: Scaling
 }
 
 const envConfig = {
@@ -74,7 +74,7 @@ const envConfig = {
 
 export class NetworkInfraStack extends BaseInfraStack<NetworkInfraStackConfig> {
   protected appProjectRemoteState: DataTerraformRemoteStateGcs
-  protected connector: VpcAccessConnector
+  protected connector?: VpcAccessConnector
   protected dataProjectRemoteState: DataTerraformRemoteStateGcs
   protected hostProjectRemoteState: DataTerraformRemoteStateGcs
   protected hostVpcProject: ComputeSharedVpcHostProject
@@ -175,14 +175,20 @@ export class NetworkInfraStack extends BaseInfraStack<NetworkInfraStackConfig> {
       sourceSubnetworkIpRangesToNat: 'ALL_SUBNETWORKS_ALL_IP_RANGES',
     })
 
-    this.connector = new VpcAccessConnector(this, this.id('connector'), {
-      dependsOn: [this.vpc],
-      ipCidrRange: config.connectorCidr,
-      name: this.shortName('connector'),
-      network: this.vpc.selfLink,
-      project: hostProjectId,
-      ...config.scaling.data,
-    })
+    if (config.scaling) {
+      this.connector = new VpcAccessConnector(this, this.id('connector'), {
+        dependsOn: [this.vpc],
+        ipCidrRange: config.connectorCidr,
+        name: this.shortName('connector'),
+        network: this.vpc.selfLink,
+        project: hostProjectId,
+        ...config.scaling.data,
+      })
+
+      new TerraformOutput(this, 'vpc-connector-id', {
+        value: this.connector.id,
+      })
+    }
 
     new TerraformOutput(this, 'vpc-id', {
       value: this.vpc.id,
@@ -192,8 +198,5 @@ export class NetworkInfraStack extends BaseInfraStack<NetworkInfraStackConfig> {
       value: this.vpc.project,
     })
 
-    new TerraformOutput(this, 'vpc-connector-id', {
-      value: this.connector.id,
-    })
   }
 }

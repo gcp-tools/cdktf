@@ -325,10 +325,10 @@ EOF
       deletionProtection: false,
       template: {
         scaling: { minInstanceCount: minScale, maxInstanceCount: maxScale },
-        vpcAccess: {
+        ...(scope.vpcConnectorId ? {vpcAccess: {
           connector: scope.vpcConnectorId,
           egress,
-        },
+        }}: {}),
         maxInstanceRequestConcurrency: containerConcurrency,
         timeout: `${timeoutSeconds}s`,
         serviceAccount: scope.stackServiceAccount.email,
