@@ -325,7 +325,7 @@ EOF
       deletionProtection: false,
       template: {
         scaling: { minInstanceCount: minScale, maxInstanceCount: maxScale },
-        ...(scope.vpcConnectorId
+        ...(scope.vpcConnector === 'configured'
           ? {
               vpcAccess: {
                 connector: scope.vpcConnectorId,

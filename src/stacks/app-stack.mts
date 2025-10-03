@@ -24,7 +24,8 @@ export class AppStack extends BaseStack<AppStackConfig> {
   public projectName: string
   public projectNumber: string
   public stackServiceAccount: ServiceAccount
-  public vpcConnectorId: string
+  public vpcConnector: string
+  public vpcConnectorId?: string
   public vpcProjectId: string
 
   protected firestoreDatabaseProjectId!: string
@@ -66,9 +67,13 @@ export class AppStack extends BaseStack<AppStackConfig> {
     this.projectId = this.appProjectRemoteState.getString('project-id')
     this.projectName = this.appProjectRemoteState.getString('project-name')
     this.projectNumber = this.appProjectRemoteState.getString('project-number')
-    this.vpcConnectorId =
-      this.networkInfraRemoteState.getString('vpc-connector-id')
+    this.vpcConnector = this.networkInfraRemoteState.getString('vpc-connector')
     this.vpcProjectId = this.networkInfraRemoteState.getString('vpc-project-id')
+
+    if (this.vpcConnector === 'configured') {
+      this.vpcConnectorId =
+        this.networkInfraRemoteState.getString('vpc-connector-id')
+    }
 
     const serviceAccountId = this.id()
     this.stackServiceAccount = new ServiceAccount(this, serviceAccountId, {

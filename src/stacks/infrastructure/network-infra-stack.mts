@@ -175,6 +175,14 @@ export class NetworkInfraStack extends BaseInfraStack<NetworkInfraStackConfig> {
       sourceSubnetworkIpRangesToNat: 'ALL_SUBNETWORKS_ALL_IP_RANGES',
     })
 
+    new TerraformOutput(this, 'vpc-id', {
+      value: this.vpc.id,
+    })
+
+    new TerraformOutput(this, 'vpc-project-id', {
+      value: this.vpc.project,
+    })
+
     if (config.scaling) {
       this.connector = new VpcAccessConnector(this, this.id('connector'), {
         dependsOn: [this.vpc],
@@ -185,17 +193,16 @@ export class NetworkInfraStack extends BaseInfraStack<NetworkInfraStackConfig> {
         ...config.scaling.data,
       })
 
+      new TerraformOutput(this, 'vpc-connector', {
+        value: 'configured',
+      })
       new TerraformOutput(this, 'vpc-connector-id', {
         value: this.connector.id,
       })
+    } else {
+      new TerraformOutput(this, 'vpc-connector', {
+        value: 'not-configured',
+      })
     }
-
-    new TerraformOutput(this, 'vpc-id', {
-      value: this.vpc.id,
-    })
-
-    new TerraformOutput(this, 'vpc-project-id', {
-      value: this.vpc.project,
-    })
   }
 }
