@@ -7,7 +7,6 @@ import {
 const hostProjectApis = [
   'apigateway',
   'certificatemanager',
-  'compute',
   'dns',
   'networkservices',
   'servicenetworking',

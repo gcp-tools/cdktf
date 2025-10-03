@@ -26,7 +26,6 @@ const appProjectApis = [
   'cloudfunctions',
   'cloudscheduler',
   'cloudtasks',
-  'compute',
   'eventarc',
   'eventarcpublishing',
   'iam',

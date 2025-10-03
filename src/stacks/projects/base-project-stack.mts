@@ -13,7 +13,7 @@ export type ProjectStackConfig = {
   apis: string[]
 }
 
-const coreApis = ['cloudbilling', 'iam', 'serviceusage']
+const coreApis = ['compute', 'cloudbilling', 'iam', 'serviceusage']
 
 export class BaseProjectStack extends BaseStack<BaseStackConfig> {
   protected project: Project
@@ -48,6 +48,16 @@ export class BaseProjectStack extends BaseStack<BaseStackConfig> {
         preventDestroy: false,
       },
     })
+
+    for (const api of [...new Set([...coreApis, ...projectConfig.apis])]) {
+      new ProjectService(this, this.id('service', api), {
+        dependsOn: [this.project],
+        disableDependentServices: true,
+        disableOnDestroy: false,
+        project: this.project.projectId,
+        service: `${api}.googleapis.com`,
+      })
+    }
 
     this.workloadServiceAccount = new ServiceAccount(
       this,
@@ -92,16 +102,6 @@ export class BaseProjectStack extends BaseStack<BaseStackConfig> {
       project: this.project.projectId,
       role: 'roles/owner',
     })
-
-    for (const api of [...new Set([...coreApis, ...projectConfig.apis])]) {
-      new ProjectService(this, this.id('service', api), {
-        dependsOn: [this.project],
-        disableDependentServices: true,
-        disableOnDestroy: false,
-        project: this.project.projectId,
-        service: `${api}.googleapis.com`,
-      })
-    }
 
     new TerraformOutput(this, 'project-id', {
       value: this.projectId,

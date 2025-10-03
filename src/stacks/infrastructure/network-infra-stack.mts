@@ -197,6 +197,5 @@ export class NetworkInfraStack extends BaseInfraStack<NetworkInfraStackConfig> {
     new TerraformOutput(this, 'vpc-project-id', {
       value: this.vpc.project,
     })
-
   }
 }
