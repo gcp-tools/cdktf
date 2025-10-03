@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.14.8](https://github.com/gcp-tools/cdktf/compare/v1.14.7...v1.14.8) (2025-10-03)
+
+### Bug Fixes
+
+* improves variable outputs ([7679c10](https://github.com/gcp-tools/cdktf/commit/7679c106f787e30dd03af21615a1be0872c0aea0))
+
 ## [1.14.7](https://github.com/gcp-tools/cdktf/compare/v1.14.6...v1.14.7) (2025-10-03)
 
 ### Bug Fixes
