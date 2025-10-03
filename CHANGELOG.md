@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.14.7](https://github.com/gcp-tools/cdktf/compare/v1.14.6...v1.14.7) (2025-10-03)
+
+### Bug Fixes
+
+* rejigs api order ([07ded0d](https://github.com/gcp-tools/cdktf/commit/07ded0deb45edf4c68dd0b5c109efb2799780380))
+
 ## [1.14.6](https://github.com/gcp-tools/cdktf/compare/v1.14.5...v1.14.6) (2025-09-27)
 
 ### Bug Fixes
