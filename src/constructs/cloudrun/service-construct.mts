@@ -27,9 +27,13 @@ import type { AppStack } from '../../stacks/app-stack.mjs'
 import { envConfig } from '../../utils/env.mjs'
 import { BaseAppConstruct } from '../base-app-construct.mjs'
 
-const sourceDirectory = resolve(cwd(), '..', '..', 'services')
+const sourceDirectory = {
+  service: resolve(cwd(), '..', '..', 'services'),
+  app: resolve(cwd(), '..', '..', 'apps'),
+}
 
 export type CloudRunServiceConstructConfig = {
+  type: 'service' | 'app'
   buildConfig: {
     buildArgs?: Record<string, string>
     timeout?: string
@@ -86,7 +90,7 @@ export class CloudRunServiceConstruct extends BaseAppConstruct<CloudRunServiceCo
     } = serviceConfig
 
     const serviceId = this.id('service')
-    const sourceDir = resolve(sourceDirectory, scope.stackId, id)
+    const sourceDir = resolve(sourceDirectory[config.type], scope.stackId, id)
     const dockerfile = 'Dockerfile'
 
     // --- Source Hash Computation ---
