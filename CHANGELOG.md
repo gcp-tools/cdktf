@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.15.0](https://github.com/gcp-tools/cdktf/compare/v1.14.8...v1.15.0) (2025-10-30)
+
+### ⚠ BREAKING CHANGES
+
+* sets root src path for container build
+
+### Features
+
+* sets root src path for container build ([7320c05](https://github.com/gcp-tools/cdktf/commit/7320c057a31c4d38c7e52be5a2e2b6c58c6a193e))
+
 ## [1.14.8](https://github.com/gcp-tools/cdktf/compare/v1.14.7...v1.14.8) (2025-10-03)
 
 ### Bug Fixes
