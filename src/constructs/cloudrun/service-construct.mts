@@ -292,7 +292,19 @@ steps:
       - |
         apt-get update && apt-get install -y unzip
         unzip /workspace/source.zip -d /workspace
-        unzip -o /workspace/root.zip -d /workspace
+        # Extract root workspace files - archive may contain nested directory, find and copy root files
+        mkdir -p /tmp/root-extract
+        unzip /workspace/root.zip -d /tmp/root-extract
+        # Find root files (package.json, package-lock.json, .npmrc) and copy to workspace root
+        # Handle both flat and nested archive structures
+        for file in package.json package-lock.json .npmrc; do
+          if [ -f "/tmp/root-extract/$file" ]; then
+            cp "/tmp/root-extract/$file" /workspace/
+          else
+            find /tmp/root-extract -name "$file" -type f | head -1 | xargs -I {} cp {} /workspace/ 2>/dev/null || true
+          fi
+        done
+        rm -rf /tmp/root-extract
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
