@@ -91,6 +91,8 @@ export class CloudRunServiceConstruct extends BaseAppConstruct<CloudRunServiceCo
 
     const serviceId = this.id('service')
     const sourceDir = resolve(sourceDirectory[config.type], scope.stackId, id)
+    // Calculate workspace root by going up from services/apps directory
+    const workspaceRoot = resolve(sourceDirectory[config.type], '..')
     const dockerfile = 'Dockerfile'
 
     // --- Source Hash Computation ---
@@ -252,6 +254,28 @@ export class CloudRunServiceConstruct extends BaseAppConstruct<CloudRunServiceCo
     const imageName = `${region}-docker.pkg.dev/${scope.projectId}/${repository.name}/${serviceId}`
     this.imageUri = `${imageName}:${archiveFile.outputMd5}`
 
+    // Create archive for root workspace files (package.json, package-lock.json, .npmrc)
+    // Archives the root directory - Docker build will extract root files needed for workspace context
+    const rootArchiveFile = new DataArchiveFile(this, this.id('root', 'archive', 'file'), {
+      type: 'zip',
+      sourceDir: workspaceRoot,
+      outputPath: resolve(
+        cwd(),
+        '.cdktf.out',
+        'stacks',
+        scope.projectId,
+        `root-${serviceId}-${sourceHashStep.id}.zip`,
+      ),
+      dependsOn: [sourceHashStep],
+    })
+
+    const rootArchive = new StorageBucketObject(this, this.id('root', 'archive'), {
+      bucket: bucket.name,
+      name: `root-${rootArchiveFile.outputMd5}-${sourceHashStep.id}`,
+      source: rootArchiveFile.outputPath,
+      dependsOn: [rootArchiveFile],
+    })
+
     const buildArgsLines = Object.entries(buildArgs)
       .map(([key, value]) => `      - '--build-arg=${key}=${value}'`)
       .join('\n')
@@ -259,6 +283,8 @@ export class CloudRunServiceConstruct extends BaseAppConstruct<CloudRunServiceCo
 steps:
   - name: 'gcr.io/cloud-builders/gsutil'
     args: ['cp', 'gs://${bucket.name}/${archive.name}', '/workspace/source.zip']
+  - name: 'gcr.io/cloud-builders/gsutil'
+    args: ['cp', 'gs://${bucket.name}/${rootArchive.name}', '/workspace/root.zip']
   - name: 'ubuntu'
     entrypoint: 'bash'
     args:
@@ -266,6 +292,7 @@ steps:
       - |
         apt-get update && apt-get install -y unzip
         unzip /workspace/source.zip -d /workspace
+        unzip -o /workspace/root.zip -d /workspace
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
@@ -304,10 +331,11 @@ EOF
       gcloud builds submit --quiet --no-source --config="$CLOUDBUILD_CONFIG" --project=${scope.projectId} --billing-project=${scope.projectId}
     `
     const buildStep = new LocalExec(this, this.id('build', 'step'), {
-      dependsOn: [deployerActAsBuildSa, archive, archiveFile],
+      dependsOn: [deployerActAsBuildSa, archive, archiveFile, rootArchive, rootArchiveFile],
       command: buildScript,
       triggers: {
         archive_name: archive.name,
+        root_archive_name: rootArchive.name,
         source_hash: sourceHashStep.id,
       },
     })

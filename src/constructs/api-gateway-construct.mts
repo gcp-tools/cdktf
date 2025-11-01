@@ -46,6 +46,7 @@ export type ApiGatewayConfig = {
   displayName: string
   openApiTemplatePath: string
   region: string
+  templateVars?: Record<string, string>
 }
 
 export class ApiGatewayConstruct extends BaseIngressConstruct<ApiGatewayConfig> {
@@ -79,13 +80,16 @@ export class ApiGatewayConstruct extends BaseIngressConstruct<ApiGatewayConfig> 
       },
     )
 
-    const templateVars = config.cloudRunServices.reduce(
-      (acc, service) => {
-        acc[service.key] = service.uri
-        return acc
-      },
-      {} as Record<string, string>,
-    )
+    const templateVars = {
+      ...config.cloudRunServices.reduce(
+        (acc, service) => {
+          acc[service.key] = service.uri
+          return acc
+        },
+        {} as Record<string, string>,
+      ),
+      ...(config.templateVars ?? {}),
+    }
 
     this.apiConfig = new googleApiGatewayApiConfig.GoogleApiGatewayApiConfigA(
       this,
