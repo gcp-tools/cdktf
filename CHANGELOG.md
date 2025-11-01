@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.17.0](https://github.com/gcp-tools/cdktf/compare/v1.16.0...v1.17.0) (2025-11-01)
+
+### Features
+
+* improves archive extraction ([493254b](https://github.com/gcp-tools/cdktf/commit/493254b8551969b1522b582290a903fae41e6169))
+
 ## [1.16.0](https://github.com/gcp-tools/cdktf/compare/v1.15.0...v1.16.0) (2025-11-01)
 
 ### Features
