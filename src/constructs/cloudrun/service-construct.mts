@@ -5,19 +5,17 @@
  * This construct expects images to be built and pushed to Artifact Registry
  * before Terraform runs (typically in GitHub Actions). It focuses solely on
  * provisioning and configuring the Cloud Run service.
+ *
+ * The image URI is read from the CDKTF_IMAGE_URI environment variable.
  */
 import { CloudRunServiceIamBinding } from '@cdktf/provider-google/lib/cloud-run-service-iam-binding/index.js'
 import { CloudRunV2Service } from '@cdktf/provider-google/lib/cloud-run-v2-service/index.js'
+import { z } from 'zod/v4'
 import type { ITerraformDependable } from 'cdktf'
 import type { AppStack } from '../../stacks/app-stack.mjs'
 import { BaseAppConstruct } from '../base-app-construct.mjs'
 
 export type CloudRunServiceConstructConfig = {
-  /**
-   * Pre-built image URI from GitHub Actions.
-   * Format: {region}-docker.pkg.dev/{project}/{repo}/{service}:{tag}
-   */
-  imageUri: string
   /**
    * The GCP region where the service should be deployed (e.g., 'us-central1')
    */
@@ -48,7 +46,10 @@ export class CloudRunServiceConstruct extends BaseAppConstruct<CloudRunServiceCo
   ) {
     super(scope, id, config)
 
-    const { imageUri, region, serviceConfig } = config
+    // Validate CDKTF_IMAGE_URI from environment
+    this.imageUri = z.string().min(1).parse(process.env.CDKTF_IMAGE_URI)
+
+    const { region, serviceConfig } = config
     const {
       dependsOn = [],
       grantInvokerPermissions = [],
@@ -64,7 +65,6 @@ export class CloudRunServiceConstruct extends BaseAppConstruct<CloudRunServiceCo
     } = serviceConfig
 
     const serviceId = this.id('service')
-    this.imageUri = imageUri
 
     // --- Cloud Run Service ---
     this.service = new CloudRunV2Service(this, serviceId, {
