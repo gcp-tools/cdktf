@@ -55,6 +55,11 @@ export type CloudRunServiceConstructConfig = {
     imageRetentionCount?: number
     egress?: 'ALL_TRAFFIC' | 'PRIVATE_RANGES_ONLY'
   }
+  /**
+   * Optional pre-built image URI. If provided, Cloud Build will be skipped
+   * and this image will be used directly. Useful for builds in CI/CD.
+   */
+  preBuiltImageUri?: string
 }
 
 export class CloudRunServiceConstruct extends BaseAppConstruct<CloudRunServiceConstructConfig> {
@@ -68,7 +73,7 @@ export class CloudRunServiceConstruct extends BaseAppConstruct<CloudRunServiceCo
   ) {
     super(scope, id, config)
 
-    const { buildConfig, region, serviceConfig } = config
+    const { buildConfig, region, serviceConfig, preBuiltImageUri } = config
     const {
       timeout: buildTimeout = '1200s',
       machineType = 'E2_MEDIUM',
@@ -88,6 +93,9 @@ export class CloudRunServiceConstruct extends BaseAppConstruct<CloudRunServiceCo
       imageRetentionCount = 10,
       egress = 'PRIVATE_RANGES_ONLY',
     } = serviceConfig
+
+    // Determine if we should use pre-built image or build during Terraform
+    const usePreBuiltImage = Boolean(preBuiltImageUri)
 
     const serviceId = this.id('service')
     const sourceDir = resolve(sourceDirectory[config.type], scope.stackId, id)
@@ -252,7 +260,10 @@ export class CloudRunServiceConstruct extends BaseAppConstruct<CloudRunServiceCo
 
     // --- Image URI & Build YAML (Using Archive Hash) ---
     const imageName = `${region}-docker.pkg.dev/${scope.projectId}/${repository.name}/${serviceId}`
-    this.imageUri = `${imageName}:${archiveFile.outputMd5}`
+    // Use pre-built image URI if provided, otherwise compute from hash
+    this.imageUri = usePreBuiltImage
+      ? preBuiltImageUri!
+      : `${imageName}:${archiveFile.outputMd5}`
 
     // Create archive for root workspace files (package.json, package-lock.json, .npmrc)
     // Archives the root directory - Docker build will extract root files needed for workspace context
@@ -294,16 +305,25 @@ steps:
         unzip /workspace/source.zip -d /workspace
         # Extract root workspace files - archive may contain nested directory, find and copy root files
         mkdir -p /tmp/root-extract
-        unzip /workspace/root.zip -d /tmp/root-extract
+        unzip -q /workspace/root.zip -d /tmp/root-extract
         # Find root files (package.json, package-lock.json, .npmrc) and copy to workspace root
         # Handle both flat and nested archive structures
         for file in package.json package-lock.json .npmrc; do
           if [ -f "/tmp/root-extract/$file" ]; then
-            cp "/tmp/root-extract/$file" /workspace/
+            cp "/tmp/root-extract/$file" /workspace/ || true
           else
-            find /tmp/root-extract -name "$file" -type f | head -1 | xargs -I {} cp {} /workspace/ 2>/dev/null || true
+            FOUND_FILE=$(find /tmp/root-extract -name "$file" -type f | head -1)
+            if [ -n "$FOUND_FILE" ]; then
+              cp "$FOUND_FILE" /workspace/ || true
+            fi
           fi
         done
+        # Verify required files exist
+        if [ ! -f "/workspace/package.json" ] || [ ! -f "/workspace/package-lock.json" ]; then
+          echo "ERROR: Required workspace files not found after extraction"
+          ls -la /tmp/root-extract/
+          exit 1
+        fi
         rm -rf /tmp/root-extract
   - name: 'gcr.io/cloud-builders/docker'
     args:
@@ -342,24 +362,31 @@ EOF
 
       gcloud builds submit --quiet --no-source --config="$CLOUDBUILD_CONFIG" --project=${scope.projectId} --billing-project=${scope.projectId}
     `
-    const buildStep = new LocalExec(this, this.id('build', 'step'), {
-      dependsOn: [deployerActAsBuildSa, archive, archiveFile, rootArchive, rootArchiveFile],
-      command: buildScript,
-      triggers: {
-        archive_name: archive.name,
-        root_archive_name: rootArchive.name,
-        source_hash: sourceHashStep.id,
-      },
-    })
+    // Only create build step if not using pre-built image
+    const buildStep = usePreBuiltImage
+      ? undefined
+      : new LocalExec(this, this.id('build', 'step'), {
+          dependsOn: [
+            deployerActAsBuildSa,
+            archive,
+            archiveFile,
+            rootArchive,
+            rootArchiveFile,
+          ],
+          command: buildScript,
+          triggers: {
+            archive_name: archive.name,
+            root_archive_name: rootArchive.name,
+            source_hash: sourceHashStep.id,
+          },
+        })
 
-    const imagePropagationDelay = new Sleep(
-      this,
-      this.id('image', 'propagation', 'delay'),
-      {
-        createDuration: '30s',
-        dependsOn: [buildStep],
-      },
-    )
+    const imagePropagationDelay = usePreBuiltImage
+      ? undefined
+      : new Sleep(this, this.id('image', 'propagation', 'delay'), {
+          createDuration: '30s',
+          dependsOn: [buildStep!],
+        })
 
     // --- Cloud Run Service ---
     this.service = new CloudRunV2Service(this, serviceId, {
@@ -410,7 +437,11 @@ EOF
       traffic: [
         { type: 'TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST', percent: 100 },
       ],
-      dependsOn: [imagePropagationDelay, deployerBinding, ...dependsOn],
+      dependsOn: [
+        ...(imagePropagationDelay ? [imagePropagationDelay] : []),
+        deployerBinding,
+        ...dependsOn,
+      ],
     })
 
     // --- Service Invoker IAM ---
