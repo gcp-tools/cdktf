@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.19.1](https://github.com/gcp-tools/cdktf/compare/v1.19.0...v1.19.1) (2025-11-03)
+
+### Bug Fixes
+
+* better localised use of env vars ([a56faec](https://github.com/gcp-tools/cdktf/commit/a56faecadfdec9bfddde7aaa86266b0067ccad65))
+
 ## [1.19.0](https://github.com/gcp-tools/cdktf/compare/v1.18.0...v1.19.0) (2025-11-03)
 
 ### Features
