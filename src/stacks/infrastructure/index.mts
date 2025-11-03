@@ -1,3 +1,4 @@
+export * from './artifact-registry-infra-stack.mjs'
 export * from './base-infra-stack.mjs'
 export * from './iam-infra-stack.mjs'
 export * from './network-infra-stack.mjs'

@@ -64,5 +64,15 @@ export class AppProjectStack extends BaseProjectStack {
       role: 'roles/cloudbuild.builds.builder',
       member: `serviceAccount:${envConfig.deployerSaEmail}`,
     })
+
+    new ProjectIamMember(
+      this,
+      this.id('iam', 'deployer', 'artifact', 'registry', 'writer'),
+      {
+        project: this.projectId,
+        role: 'roles/artifactregistry.writer',
+        member: `serviceAccount:${envConfig.deployerSaEmail}`,
+      },
+    )
   }
 }

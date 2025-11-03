@@ -44,6 +44,7 @@ export type EnvConfig = {
   githubIdentitySpecifier: string
   developerIdentitySpecifier: string
   deployerSaEmail: string
+  imageUri: Record<string, Record<string, string>>
 }
 
 const parsedResult = envSchema.safeParse(env)
@@ -56,6 +57,26 @@ if (!parsedResult.success) {
 }
 
 export const envVars: Env = parsedResult.data
+
+// Parse image URIs from GitHub Actions environment variables
+// Format: CDKTF_IMAGE_URI_STACKID_SERVICEID
+const imageUriEnvVars = Object.entries(process.env)
+  .filter(([key]) => key.startsWith('CDKTF_IMAGE_URI_'))
+  .reduce(
+    (acc, [key, value]) => {
+      if (!value) return acc
+      // Parse: CDKTF_IMAGE_URI_JOBS_API -> { jobs: { api: "..." } }
+      const parts = key.replace('CDKTF_IMAGE_URI_', '').toLowerCase().split('_')
+      if (parts.length >= 2) {
+        const [stackId, serviceId] = parts
+        if (!acc[stackId]) acc[stackId] = {}
+        acc[stackId][serviceId] = value
+      }
+      return acc
+    },
+    {} as Record<string, Record<string, string>>,
+  )
+
 export const envConfig: EnvConfig = {
   billingAccount: envVars.GCP_TOOLS_BILLING_ACCOUNT,
   bucket: envVars.GCP_TOOLS_TERRAFORM_REMOTE_STATE_BUCKET_ID,
@@ -71,4 +92,5 @@ export const envConfig: EnvConfig = {
   githubIdentitySpecifier: envVars.GCP_TOOLS_GITHUB_IDENTITY_SPECIFIER,
   developerIdentitySpecifier: envVars.GCP_TOOLS_DEVELOPER_IDENTITY_SPECIFIER,
   deployerSaEmail: envVars.GCP_TOOLS_SERVICE_ACCOUNT_EMAIL,
+  imageUri: imageUriEnvVars,
 }

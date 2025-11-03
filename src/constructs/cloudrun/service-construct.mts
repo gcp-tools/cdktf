@@ -1,45 +1,26 @@
 /**
- * CloudRunServiceConstructAlt - An alternative, robust implementation for
- * deploying containerized applications to Cloud Run.
+ * CloudRunServiceConstruct - Simplified implementation for deploying
+ * containerized applications to Cloud Run using pre-built images.
  *
- * This construct is designed to be highly reliable in CI/CD environments.
- * It declaratively enables required APIs and includes a resilient build
- * script that handles the "eventual consistency" of cloud provider APIs.
+ * This construct expects images to be built and pushed to Artifact Registry
+ * before Terraform runs (typically in GitHub Actions). It focuses solely on
+ * provisioning and configuring the Cloud Run service.
  */
-import { resolve } from 'node:path'
-import { cwd } from 'node:process'
-import { DataArchiveFile } from '@cdktf/provider-archive/lib/data-archive-file/index.js'
-import { ArtifactRegistryRepository } from '@cdktf/provider-google/lib/artifact-registry-repository/index.js'
 import { CloudRunServiceIamBinding } from '@cdktf/provider-google/lib/cloud-run-service-iam-binding/index.js'
 import { CloudRunV2Service } from '@cdktf/provider-google/lib/cloud-run-v2-service/index.js'
-import { ProjectIamMember } from '@cdktf/provider-google/lib/project-iam-member/index.js'
-import { ServiceAccountIamBinding } from '@cdktf/provider-google/lib/service-account-iam-binding/index.js'
-import { ServiceAccountIamMember } from '@cdktf/provider-google/lib/service-account-iam-member/index.js'
-import { ServiceAccount } from '@cdktf/provider-google/lib/service-account/index.js'
-import { StorageBucketIamBinding } from '@cdktf/provider-google/lib/storage-bucket-iam-binding/index.js'
-import { StorageBucketObject } from '@cdktf/provider-google/lib/storage-bucket-object/index.js'
-import { StorageBucket } from '@cdktf/provider-google/lib/storage-bucket/index.js'
-import { StringResource } from '@cdktf/provider-random/lib/string-resource/index.js'
-import { Sleep } from '@cdktf/provider-time/lib/sleep/index.js'
 import type { ITerraformDependable } from 'cdktf'
-import { LocalExec } from 'cdktf-local-exec'
 import type { AppStack } from '../../stacks/app-stack.mjs'
-import { envConfig } from '../../utils/env.mjs'
 import { BaseAppConstruct } from '../base-app-construct.mjs'
 
-const sourceDirectory = {
-  service: resolve(cwd(), '..', '..', 'services'),
-  app: resolve(cwd(), '..', '..', 'apps'),
-}
-
 export type CloudRunServiceConstructConfig = {
-  type: 'service' | 'app'
-  buildConfig: {
-    buildArgs?: Record<string, string>
-    timeout?: string
-    machineType?: string
-    buildTrigger?: string
-  }
+  /**
+   * Pre-built image URI from GitHub Actions.
+   * Format: {region}-docker.pkg.dev/{project}/{repo}/{service}:{tag}
+   */
+  imageUri: string
+  /**
+   * The GCP region where the service should be deployed (e.g., 'us-central1')
+   */
   region: string
   serviceConfig: {
     dependsOn?: ITerraformDependable[]
@@ -52,14 +33,8 @@ export type CloudRunServiceConstructConfig = {
     containerPort?: number
     containerConcurrency?: number
     timeoutSeconds?: number
-    imageRetentionCount?: number
     egress?: 'ALL_TRAFFIC' | 'PRIVATE_RANGES_ONLY'
   }
-  /**
-   * Optional pre-built image URI. If provided, Cloud Build will be skipped
-   * and this image will be used directly. Useful for builds in CI/CD.
-   */
-  preBuiltImageUri?: string
 }
 
 export class CloudRunServiceConstruct extends BaseAppConstruct<CloudRunServiceConstructConfig> {
@@ -73,12 +48,7 @@ export class CloudRunServiceConstruct extends BaseAppConstruct<CloudRunServiceCo
   ) {
     super(scope, id, config)
 
-    const { buildConfig, region, serviceConfig, preBuiltImageUri } = config
-    const {
-      timeout: buildTimeout = '1200s',
-      machineType = 'E2_MEDIUM',
-      buildArgs = {},
-    } = buildConfig
+    const { imageUri, region, serviceConfig } = config
     const {
       dependsOn = [],
       grantInvokerPermissions = [],
@@ -90,303 +60,11 @@ export class CloudRunServiceConstruct extends BaseAppConstruct<CloudRunServiceCo
       containerPort = 8080,
       containerConcurrency = 80,
       timeoutSeconds = 60,
-      imageRetentionCount = 10,
       egress = 'PRIVATE_RANGES_ONLY',
     } = serviceConfig
 
-    // Determine if we should use pre-built image or build during Terraform
-    const usePreBuiltImage = Boolean(preBuiltImageUri)
-
     const serviceId = this.id('service')
-    const sourceDir = resolve(sourceDirectory[config.type], scope.stackId, id)
-    // Calculate workspace root by going up from services/apps directory
-    const workspaceRoot = resolve(sourceDirectory[config.type], '..')
-    const dockerfile = 'Dockerfile'
-
-    // --- Source Hash Computation ---
-    // Compute a hash of all source files to detect changes automatically
-    // Uses include-first approach to automatically detect any source files
-    const sourceHashStep = new LocalExec(this, this.id('source', 'hash'), {
-      command: `
-        cd "${sourceDir}" && \
-        find . -type f \
-          ! -path "./node_modules/*" \
-          ! -path "./dist/*" \
-          ! -path "./build/*" \
-          ! -path "./target/*" \
-          ! -path "./.git/*" \
-          ! -path "./.terraform/*" \
-          ! -path "./.cdktf/*" \
-          ! -path "./coverage/*" \
-          ! -path "./.nyc_output/*" \
-          ! -path "./.next/*" \
-          ! -path "./.nuxt/*" \
-          ! -path "./.cache/*" \
-          ! -path "./tmp/*" \
-          ! -path "./temp/*" \
-          ! -path "./*.log" \
-          ! -name "*.log" \
-          ! -name ".DS_Store" \
-          ! -name "Thumbs.db" \
-        | sort | md5sum | cut -d' ' -f1
-      `,
-    })
-
-    // --- Service Account for the Build ---
-    const buildServiceAccount = new ServiceAccount(
-      this,
-      this.id('build', 'sa'),
-      {
-        accountId: this.shortName('build', 'sa'),
-        displayName: 'Cloud Build SA',
-        project: scope.projectId,
-      },
-    )
-
-    // --- Artifact Registry Repository ---
-    const cleanupPolicies =
-      imageRetentionCount > 0
-        ? [
-            {
-              id: 'keep-most-recent',
-              action: 'KEEP',
-              condition: {
-                packageNamePrefixes: [serviceId.toLowerCase()],
-                tagState: 'ANY',
-                newerCountThan: imageRetentionCount,
-              },
-            },
-            {
-              id: 'delete-old-images',
-              action: 'DELETE',
-              condition: {
-                packageNamePrefixes: [serviceId.toLowerCase()],
-                tagState: 'ANY',
-              },
-            },
-          ]
-        : undefined
-    const repository = new ArtifactRegistryRepository(this, this.id('repo'), {
-      repositoryId: this.id('repo').toLowerCase(),
-      format: 'DOCKER',
-      location: region,
-      project: scope.projectId,
-      cleanupPolicies,
-    })
-
-    // --- Source Code Storage ---
-    const bucketId = `${this.id('source', 'code')}-${
-      new StringResource(this, this.id('random', 'id'), {
-        length: 6,
-        lower: true,
-        upper: false,
-        numeric: true,
-        special: false,
-      }).id
-    }`
-    const bucket = new StorageBucket(this, this.id('source', 'code'), {
-      name: bucketId,
-      location: region,
-      project: scope.projectId,
-      forceDestroy: true,
-      uniformBucketLevelAccess: true,
-    })
-    const archiveFile = new DataArchiveFile(this, this.id('archive', 'file'), {
-      type: 'zip',
-      sourceDir,
-      outputPath: resolve(
-        cwd(),
-        '.cdktf.out',
-        'stacks',
-        scope.projectId,
-        `${serviceId}-${sourceHashStep.id}.zip`,
-      ),
-      dependsOn: [sourceHashStep],
-    })
-
-    const archive = new StorageBucketObject(this, this.id('archive'), {
-      bucket: bucket.name,
-      name: `${archiveFile.outputMd5}-${sourceHashStep.id}`,
-      source: archiveFile.outputPath,
-      dependsOn: [archiveFile],
-    })
-
-    // Grant the custom Cloud Build service account permission to write to the repo.
-    new ProjectIamMember(this, this.id('cloudbuild', 'registry', 'writer'), {
-      project: scope.projectId,
-      role: 'roles/artifactregistry.writer',
-      member: buildServiceAccount.member,
-      dependsOn: [repository],
-    })
-
-    new StorageBucketIamBinding(
-      this,
-      this.id('cloudbuild', 'bucket', 'reader'),
-      {
-        bucket: bucket.name,
-        members: [buildServiceAccount.member],
-        role: 'roles/storage.objectViewer',
-      },
-    )
-
-    // Grant the custom Cloud Build service account permission to write logs.
-    new ProjectIamMember(this, this.id('cloudbuild', 'logs', 'writer'), {
-      project: scope.projectId,
-      role: 'roles/logging.logWriter',
-      member: buildServiceAccount.member,
-    })
-
-    const deployerBinding = new ServiceAccountIamBinding(
-      this,
-      this.id('deployer', 'sa', 'user'),
-      {
-        serviceAccountId: scope.stackServiceAccount.id,
-        role: 'roles/iam.serviceAccountUser',
-        members: [`serviceAccount:${envConfig.deployerSaEmail}`],
-      },
-    )
-
-    // Grant the deployer SA permission to act as the build SA.
-    // This is the key dependency to prevent the build from running too early.
-    const deployerActAsBuildSa = new ServiceAccountIamMember(
-      this,
-      this.id('deployer', 'act', 'as', 'build', 'sa'),
-      {
-        serviceAccountId: buildServiceAccount.id,
-        role: 'roles/iam.serviceAccountUser',
-        member: `serviceAccount:${envConfig.deployerSaEmail}`,
-      },
-    )
-
-    // --- Image URI & Build YAML (Using Archive Hash) ---
-    const imageName = `${region}-docker.pkg.dev/${scope.projectId}/${repository.name}/${serviceId}`
-    // Use pre-built image URI if provided, otherwise compute from hash
-    this.imageUri = usePreBuiltImage
-      ? preBuiltImageUri!
-      : `${imageName}:${archiveFile.outputMd5}`
-
-    // Create archive for root workspace files (package.json, package-lock.json, .npmrc)
-    // Archives the root directory - Docker build will extract root files needed for workspace context
-    const rootArchiveFile = new DataArchiveFile(this, this.id('root', 'archive', 'file'), {
-      type: 'zip',
-      sourceDir: workspaceRoot,
-      outputPath: resolve(
-        cwd(),
-        '.cdktf.out',
-        'stacks',
-        scope.projectId,
-        `root-${serviceId}-${sourceHashStep.id}.zip`,
-      ),
-      dependsOn: [sourceHashStep],
-    })
-
-    const rootArchive = new StorageBucketObject(this, this.id('root', 'archive'), {
-      bucket: bucket.name,
-      name: `root-${rootArchiveFile.outputMd5}-${sourceHashStep.id}`,
-      source: rootArchiveFile.outputPath,
-      dependsOn: [rootArchiveFile],
-    })
-
-    const buildArgsLines = Object.entries(buildArgs)
-      .map(([key, value]) => `      - '--build-arg=${key}=${value}'`)
-      .join('\n')
-    const cloudbuildYaml = `
-steps:
-  - name: 'gcr.io/cloud-builders/gsutil'
-    args: ['cp', 'gs://${bucket.name}/${archive.name}', '/workspace/source.zip']
-  - name: 'gcr.io/cloud-builders/gsutil'
-    args: ['cp', 'gs://${bucket.name}/${rootArchive.name}', '/workspace/root.zip']
-  - name: 'ubuntu'
-    entrypoint: 'bash'
-    args:
-      - -c
-      - |
-        apt-get update && apt-get install -y unzip
-        unzip /workspace/source.zip -d /workspace
-        # Extract root workspace files - archive may contain nested directory, find and copy root files
-        mkdir -p /tmp/root-extract
-        unzip -q /workspace/root.zip -d /tmp/root-extract
-        # Find root files (package.json, package-lock.json, .npmrc) and copy to workspace root
-        # Handle both flat and nested archive structures
-        for file in package.json package-lock.json .npmrc; do
-          if [ -f "/tmp/root-extract/$file" ]; then
-            cp "/tmp/root-extract/$file" /workspace/ || true
-          else
-            FOUND_FILE=$(find /tmp/root-extract -name "$file" -type f | head -1)
-            if [ -n "$FOUND_FILE" ]; then
-              cp "$FOUND_FILE" /workspace/ || true
-            fi
-          fi
-        done
-        # Verify required files exist
-        if [ ! -f "/workspace/package.json" ] || [ ! -f "/workspace/package-lock.json" ]; then
-          echo "ERROR: Required workspace files not found after extraction"
-          ls -la /tmp/root-extract/
-          exit 1
-        fi
-        rm -rf /tmp/root-extract
-  - name: 'gcr.io/cloud-builders/docker'
-    args:
-      - 'build'
-      - '-t'
-      - '${imageName}:latest' # Floating tag for developers
-      - '-t'
-      - '${this.imageUri}' # Immutable tag for this specific source version
-      - '-f'
-      - '/workspace/${dockerfile}'
-${buildArgsLines}
-      - '/workspace'
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', '--all-tags', '${imageName}']
-timeout: ${buildTimeout}
-options:
-  machineType: ${machineType}
-  logging: CLOUD_LOGGING_ONLY
-serviceAccount: '${buildServiceAccount.name}'
-`
-
-    // --- LocalExec Build Step ---
-    const buildScript = `
-      # Exit immediately if a command exits with a non-zero status.
-      set -e
-      # Trace commands before they are executed.
-      set -x
-
-      echo "Submitting build to project ${scope.projectId}..."
-
-      CLOUDBUILD_CONFIG=$(mktemp)
-      trap 'rm -f "$CLOUDBUILD_CONFIG"' EXIT
-      cat > "$CLOUDBUILD_CONFIG" <<EOF
-${cloudbuildYaml}
-EOF
-
-      gcloud builds submit --quiet --no-source --config="$CLOUDBUILD_CONFIG" --project=${scope.projectId} --billing-project=${scope.projectId}
-    `
-    // Only create build step if not using pre-built image
-    const buildStep = usePreBuiltImage
-      ? undefined
-      : new LocalExec(this, this.id('build', 'step'), {
-          dependsOn: [
-            deployerActAsBuildSa,
-            archive,
-            archiveFile,
-            rootArchive,
-            rootArchiveFile,
-          ],
-          command: buildScript,
-          triggers: {
-            archive_name: archive.name,
-            root_archive_name: rootArchive.name,
-            source_hash: sourceHashStep.id,
-          },
-        })
-
-    const imagePropagationDelay = usePreBuiltImage
-      ? undefined
-      : new Sleep(this, this.id('image', 'propagation', 'delay'), {
-          createDuration: '30s',
-          dependsOn: [buildStep!],
-        })
+    this.imageUri = imageUri
 
     // --- Cloud Run Service ---
     this.service = new CloudRunV2Service(this, serviceId, {
@@ -437,11 +115,7 @@ EOF
       traffic: [
         { type: 'TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST', percent: 100 },
       ],
-      dependsOn: [
-        ...(imagePropagationDelay ? [imagePropagationDelay] : []),
-        deployerBinding,
-        ...dependsOn,
-      ],
+      dependsOn,
     })
 
     // --- Service Invoker IAM ---
