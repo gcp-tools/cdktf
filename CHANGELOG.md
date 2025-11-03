@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.19.0](https://github.com/gcp-tools/cdktf/compare/v1.18.0...v1.19.0) (2025-11-03)
+
+### Features
+
+* add ArtifactRegistryInfraStack and simplify CloudRunServiceConstruct ([448ff97](https://github.com/gcp-tools/cdktf/commit/448ff971a1ef309732cd6268ebf117e83155881c))
+
 ## [1.18.0](https://github.com/gcp-tools/cdktf/compare/v1.17.0...v1.18.0) (2025-11-03)
 
 ### Features
