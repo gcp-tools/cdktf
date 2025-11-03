@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.18.0](https://github.com/gcp-tools/cdktf/compare/v1.17.0...v1.18.0) (2025-11-03)
+
+### Features
+
+* now deploys pre built image ([55df5e9](https://github.com/gcp-tools/cdktf/commit/55df5e9c6340ebf5b86897858d602f4c4bbf1def))
+
 ## [1.17.0](https://github.com/gcp-tools/cdktf/compare/v1.16.0...v1.17.0) (2025-11-01)
 
 ### Features
