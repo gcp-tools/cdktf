@@ -1,5 +1,4 @@
 import { IdentityPlatformConfig } from '@cdktf/provider-google/lib/identity-platform-config/index.js'
-import { ProjectIamMember } from '@cdktf/provider-google/lib/project-iam-member/index.js'
 import { DataTerraformRemoteStateGcs, TerraformOutput } from 'cdktf'
 import type { App } from 'cdktf'
 import { envConfig } from '../../utils/env.mjs'
@@ -11,8 +10,7 @@ export type IdentityPlatformInfraStackConfig = Record<string, never>
  * Provisions Identity Platform (Firebase Auth) configuration in the app project.
  *
  * This stack creates the Identity Platform configuration with email/password
- * authentication, MFA support, and authorized domains. It also grants the
- * IdentityStack service account the firebaseauth.admin role.
+ * authentication, MFA support, and authorized domains.
  *
  * @example
  * ```ts
@@ -21,7 +19,6 @@ export type IdentityPlatformInfraStackConfig = Record<string, never>
  */
 export class IdentityPlatformInfraStack extends BaseInfraStack<IdentityPlatformInfraStackConfig> {
   protected appProjectRemoteState: DataTerraformRemoteStateGcs
-  protected identityAppRemoteState: DataTerraformRemoteStateGcs
   public readonly idpConfig: IdentityPlatformConfig
   public appProjectId: string
 
@@ -34,15 +31,6 @@ export class IdentityPlatformInfraStack extends BaseInfraStack<IdentityPlatformI
       {
         bucket: envConfig.bucket,
         prefix: this.remotePrefix('project', 'app'),
-      },
-    )
-
-    this.identityAppRemoteState = new DataTerraformRemoteStateGcs(
-      this,
-      this.id('remote', 'state', 'identity'),
-      {
-        bucket: envConfig.bucket,
-        prefix: this.remotePrefix('app', 'identity'),
       },
     )
 
@@ -82,18 +70,6 @@ export class IdentityPlatformInfraStack extends BaseInfraStack<IdentityPlatformI
         },
       },
     )
-
-    const identityServiceAccountEmail = this.identityAppRemoteState.getString(
-      'service-account-email',
-    )
-
-    new ProjectIamMember(this, this.id('sa', 'firebase', 'admin'), {
-      dependsOn: [this.idpConfig],
-      member: `serviceAccount:${identityServiceAccountEmail}`,
-      project: this.appProjectId,
-      role: 'roles/firebaseauth.admin',
-      provider: this.googleProvider,
-    })
 
     new TerraformOutput(this, 'idp-client-api-key', {
       description: 'The API key of the IDP client.',
