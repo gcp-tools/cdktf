@@ -22,12 +22,20 @@ export class BaseProjectStack extends BaseStack<BaseStackConfig> {
   protected projectName: string
 
   constructor(scope: App, id: string, projectConfig: ProjectStackConfig) {
+    console.log(`[BaseProjectStack:${id}] projectConfig.apis:`, projectConfig.apis)
+    console.log(`[BaseProjectStack:${id}] projectConfig.apis type:`, typeof projectConfig.apis, Array.isArray(projectConfig.apis))
+    console.log(`[BaseProjectStack:${id}] projectConfig.apis includes identitytoolkit:`, projectConfig.apis?.includes?.('identitytoolkit'))
+    console.log(`[BaseProjectStack:${id}] coreApis:`, coreApis)
+
     super(scope, id, 'project', {
       ...projectConfig,
       user: 'ci',
     })
 
     const allApis = [...new Set([...coreApis, ...projectConfig.apis])]
+    console.log(`[BaseProjectStack:${id}] allApis:`, allApis)
+    console.log(`[BaseProjectStack:${id}] allApis includes identitytoolkit:`, allApis.includes('identitytoolkit'))
+    console.log(`[BaseProjectStack:${id}] Creating ProjectService for ${allApis.length} APIs`)
 
     this.projectName = this.identifier()
     this.projectId = `${this.projectName}-${
@@ -52,6 +60,7 @@ export class BaseProjectStack extends BaseStack<BaseStackConfig> {
     })
 
     for (const api of allApis) {
+      console.log(`[BaseProjectStack:${id}] Creating ProjectService for: ${api} (${api}.googleapis.com)`)
       new ProjectService(this, this.id('service', api), {
         dependsOn: [this.project],
         disableDependentServices: true,

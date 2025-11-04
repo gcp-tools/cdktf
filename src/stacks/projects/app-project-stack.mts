@@ -38,7 +38,11 @@ const appProjectApis = [
 
 export class AppProjectStack extends BaseProjectStack {
   constructor(scope: App, config: ProjectStackConfig = { apis: [] }) {
-    const mergedApis = [...appProjectApis, ...config.apis];
+    console.log('[AppProjectStack] config.apis:', config.apis)
+    console.log('[AppProjectStack] appProjectApis:', appProjectApis)
+    const mergedApis = [...appProjectApis, ...config.apis]
+    console.log('[AppProjectStack] mergedApis:', mergedApis)
+    console.log('[AppProjectStack] mergedApis includes identitytoolkit:', mergedApis.includes('identitytoolkit'))
 
     super(scope, 'app', {
       apis: mergedApis,
