@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.20.3](https://github.com/gcp-tools/cdktf/compare/v1.20.2...v1.20.3) (2025-11-04)
+
+### Chores
+
+* better iam ([11b778c](https://github.com/gcp-tools/cdktf/commit/11b778c3e9354aa79e01679210aa44948d935b9d))
+
 ## [1.20.2](https://github.com/gcp-tools/cdktf/compare/v1.20.1...v1.20.2) (2025-11-04)
 
 ### Chores
