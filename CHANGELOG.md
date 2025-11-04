@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.19.3](https://github.com/gcp-tools/cdktf/compare/v1.19.2...v1.19.3) (2025-11-04)
+
+### Chores
+
+* adds logging to identify api bug ([eb90a6e](https://github.com/gcp-tools/cdktf/commit/eb90a6e70bc7bf8810ea6e205ac84ebb87639b70))
+
 ## [1.19.2](https://github.com/gcp-tools/cdktf/compare/v1.19.1...v1.19.2) (2025-11-04)
 
 ### Bug Fixes
