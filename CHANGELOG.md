@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.20.6](https://github.com/gcp-tools/cdktf/compare/v1.20.5...v1.20.6) (2025-11-04)
+
+### Chores
+
+* aaagghhhhhhh fuck it ([b1cfc40](https://github.com/gcp-tools/cdktf/commit/b1cfc40317da03a8acff465e8031e30dc2885d50))
+
 ## [1.20.5](https://github.com/gcp-tools/cdktf/compare/v1.20.4...v1.20.5) (2025-11-04)
 
 ### Chores
