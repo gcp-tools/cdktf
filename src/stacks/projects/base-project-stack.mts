@@ -52,9 +52,6 @@ export class BaseProjectStack extends BaseStack<BaseStackConfig> {
     })
 
     for (const api of allApis) {
-      console.log(
-        `[BaseProjectStack:${id}] Creating ProjectService for: ${api} (${api}.googleapis.com)`,
-      )
       new ProjectService(this, this.id('service', api), {
         dependsOn: [this.project],
         disableDependentServices: true,

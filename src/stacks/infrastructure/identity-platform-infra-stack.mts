@@ -40,6 +40,7 @@ export class IdentityPlatformInfraStack extends BaseInfraStack<IdentityPlatformI
       this,
       this.id('idp', 'config'),
       {
+        provider: this.googleProvider,
         authorizedDomains: [
           ...(envConfig.environment !== 'prod' ? ['localhost'] : []),
           `${this.appProjectId}.firebaseapp.com`,
