@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.20.1](https://github.com/gcp-tools/cdktf/compare/v1.20.0...v1.20.1) (2025-11-04)
+
+### Chores
+
+* removes logging ([df3d146](https://github.com/gcp-tools/cdktf/commit/df3d146a7e7be6db8e7761ce94dd4e0bd585d9da))
+
 ## [1.20.0](https://github.com/gcp-tools/cdktf/compare/v1.19.3...v1.20.0) (2025-11-04)
 
 ### Features
