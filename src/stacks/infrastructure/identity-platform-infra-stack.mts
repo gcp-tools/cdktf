@@ -1,5 +1,5 @@
-import { ProjectIamMember } from '@cdktf/provider-google/lib/project-iam-member/index.js'
 import { IdentityPlatformConfig } from '@cdktf/provider-google/lib/identity-platform-config/index.js'
+import { ProjectIamMember } from '@cdktf/provider-google/lib/project-iam-member/index.js'
 import { DataTerraformRemoteStateGcs, TerraformOutput } from 'cdktf'
 import type { App } from 'cdktf'
 import { envConfig } from '../../utils/env.mjs'
@@ -87,17 +87,13 @@ export class IdentityPlatformInfraStack extends BaseInfraStack<IdentityPlatformI
       'service-account-email',
     )
 
-    new ProjectIamMember(
-      this,
-      this.id('sa', 'firebase', 'admin'),
-      {
-        dependsOn: [this.idpConfig],
-        member: `serviceAccount:${identityServiceAccountEmail}`,
-        project: this.appProjectId,
-        role: 'roles/firebaseauth.admin',
-        provider: this.googleProvider,
-      },
-    )
+    new ProjectIamMember(this, this.id('sa', 'firebase', 'admin'), {
+      dependsOn: [this.idpConfig],
+      member: `serviceAccount:${identityServiceAccountEmail}`,
+      project: this.appProjectId,
+      role: 'roles/firebaseauth.admin',
+      provider: this.googleProvider,
+    })
 
     new TerraformOutput(this, 'idp-client-api-key', {
       description: 'The API key of the IDP client.',
@@ -112,4 +108,3 @@ export class IdentityPlatformInfraStack extends BaseInfraStack<IdentityPlatformI
     })
   }
 }
-

@@ -38,18 +38,12 @@ const appProjectApis = [
 
 export class AppProjectStack extends BaseProjectStack {
   constructor(scope: App, config: ProjectStackConfig = { apis: [] }) {
-    console.log('[AppProjectStack] config.apis:', config.apis)
-    console.log('[AppProjectStack] appProjectApis:', appProjectApis)
     const mergedApis = [...appProjectApis, ...config.apis]
-    console.log('[AppProjectStack] mergedApis:', mergedApis)
-    console.log('[AppProjectStack] mergedApis includes identitytoolkit:', mergedApis.includes('identitytoolkit'))
 
     super(scope, 'app', {
       apis: mergedApis,
     })
 
-    // Create the implicit buckets for Cloud Functions sources to avoid race conditions.
-    // This works because the name does not contain "google".
     for (const region of envConfig.regions) {
       new StorageBucket(this, `gcf-sources-bucket-${region}`, {
         name: `gcf-v2-sources-${this.project.number}-${region}`,

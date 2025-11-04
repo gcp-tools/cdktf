@@ -10,8 +10,8 @@
  */
 import { CloudRunServiceIamBinding } from '@cdktf/provider-google/lib/cloud-run-service-iam-binding/index.js'
 import { CloudRunV2Service } from '@cdktf/provider-google/lib/cloud-run-v2-service/index.js'
-import { z } from 'zod/v4'
 import type { ITerraformDependable } from 'cdktf'
+import { z } from 'zod/v4'
 import type { AppStack } from '../../stacks/app-stack.mjs'
 import { BaseAppConstruct } from '../base-app-construct.mjs'
 
