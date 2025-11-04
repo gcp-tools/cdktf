@@ -37,7 +37,6 @@ export class IdentityPlatformInfraStack extends BaseInfraStack<IdentityPlatformI
 
     this.appProjectId = this.appProjectRemoteState.getString('project-id')
 
-
     const googleProvider = new GoogleProvider(
       this,
       this.id('provider', 'google', 'identity', 'platform'),
@@ -46,8 +45,7 @@ export class IdentityPlatformInfraStack extends BaseInfraStack<IdentityPlatformI
         billingProject: this.appProjectId,
         userProjectOverride: true,
       },
-    );
-
+    )
 
     this.idpConfig = new IdentityPlatformConfig(
       this,
