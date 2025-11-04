@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.20.0](https://github.com/gcp-tools/cdktf/compare/v1.19.3...v1.20.0) (2025-11-04)
+
+### Features
+
+* creates identity platform stack ([4f68639](https://github.com/gcp-tools/cdktf/commit/4f6863924d5166f4d4e1875141ef4e07178136f4))
+
 ## [1.19.3](https://github.com/gcp-tools/cdktf/compare/v1.19.2...v1.19.3) (2025-11-04)
 
 ### Chores
