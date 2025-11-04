@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.19.2](https://github.com/gcp-tools/cdktf/compare/v1.19.1...v1.19.2) (2025-11-04)
+
+### Bug Fixes
+
+* improves api initialisation ([3e5cceb](https://github.com/gcp-tools/cdktf/commit/3e5cceb9e21c7f0f7e09cfe458bf3fa17e360753))
+
 ## [1.19.1](https://github.com/gcp-tools/cdktf/compare/v1.19.0...v1.19.1) (2025-11-03)
 
 ### Bug Fixes
