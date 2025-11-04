@@ -1,4 +1,5 @@
 import { IdentityPlatformConfig } from '@cdktf/provider-google/lib/identity-platform-config/index.js'
+import { GoogleProvider } from '@cdktf/provider-google/lib/provider/index.js'
 import { DataTerraformRemoteStateGcs, TerraformOutput } from 'cdktf'
 import type { App } from 'cdktf'
 import { envConfig } from '../../utils/env.mjs'
@@ -36,11 +37,23 @@ export class IdentityPlatformInfraStack extends BaseInfraStack<IdentityPlatformI
 
     this.appProjectId = this.appProjectRemoteState.getString('project-id')
 
+
+    const googleProvider = new GoogleProvider(
+      this,
+      this.id('provider', 'google', 'identity', 'platform'),
+      {
+        project: this.appProjectId,
+        billingProject: this.appProjectId,
+        userProjectOverride: true,
+      },
+    );
+
+
     this.idpConfig = new IdentityPlatformConfig(
       this,
       this.id('idp', 'config'),
       {
-        provider: this.googleProvider,
+        provider: googleProvider,
         authorizedDomains: [
           ...(envConfig.environment !== 'prod' ? ['localhost'] : []),
           `${this.appProjectId}.firebaseapp.com`,
