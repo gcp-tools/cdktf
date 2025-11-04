@@ -74,5 +74,15 @@ export class AppProjectStack extends BaseProjectStack {
         member: `serviceAccount:${envConfig.deployerSaEmail}`,
       },
     )
+
+    new ProjectIamMember(
+      this,
+      this.id('iam', 'deployer', 'identitytoolkit', 'admin'),
+      {
+        project: this.projectId,
+        role: 'roles/identitytoolkit.admin',
+        member: `serviceAccount:${envConfig.deployerSaEmail}`,
+      },
+    )
   }
 }
