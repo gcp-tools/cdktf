@@ -27,8 +27,10 @@ const hostProjectApis = [
  */
 export class HostProjectStack extends BaseProjectStack {
   constructor(scope: App, config: ProjectStackConfig = { apis: [] }) {
+    const mergedApis = [...hostProjectApis, ...config.apis]
+
     super(scope, 'host', {
-      apis: [...hostProjectApis, ...config.apis],
+      apis: mergedApis,
     })
   }
 }

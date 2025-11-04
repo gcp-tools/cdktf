@@ -38,8 +38,10 @@ const appProjectApis = [
 
 export class AppProjectStack extends BaseProjectStack {
   constructor(scope: App, config: ProjectStackConfig = { apis: [] }) {
+    const mergedApis = [...appProjectApis, ...config.apis];
+
     super(scope, 'app', {
-      apis: [...appProjectApis, ...config.apis],
+      apis: mergedApis,
     })
 
     // Create the implicit buckets for Cloud Functions sources to avoid race conditions.

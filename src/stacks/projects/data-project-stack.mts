@@ -26,8 +26,10 @@ const dataProjectApis = ['servicenetworking', 'secretmanager']
  */
 export class DataProjectStack extends BaseProjectStack {
   constructor(scope: App, config: ProjectStackConfig = { apis: [] }) {
+    const mergedApis = [...dataProjectApis, ...config.apis]
+
     super(scope, 'data', {
-      apis: [...dataProjectApis, ...config.apis],
+      apis: mergedApis,
     })
   }
 }

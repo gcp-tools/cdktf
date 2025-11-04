@@ -27,6 +27,8 @@ export class BaseProjectStack extends BaseStack<BaseStackConfig> {
       user: 'ci',
     })
 
+    const allApis = [...new Set([...coreApis, ...projectConfig.apis])]
+
     this.projectName = this.identifier()
     this.projectId = `${this.projectName}-${
       new StringResource(this, this.id('random', 'id'), {
@@ -49,7 +51,7 @@ export class BaseProjectStack extends BaseStack<BaseStackConfig> {
       },
     })
 
-    for (const api of [...new Set([...coreApis, ...projectConfig.apis])]) {
+    for (const api of allApis) {
       new ProjectService(this, this.id('service', api), {
         dependsOn: [this.project],
         disableDependentServices: true,
