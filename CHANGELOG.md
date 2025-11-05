@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.20.7](https://github.com/gcp-tools/cdktf/compare/v1.20.6...v1.20.7) (2025-11-05)
+
+### Chores
+
+* new aliased provider ([26ecce4](https://github.com/gcp-tools/cdktf/commit/26ecce4ec46bbac05f353e03ffa237843ff4dfd0))
+
 ## [1.20.6](https://github.com/gcp-tools/cdktf/compare/v1.20.5...v1.20.6) (2025-11-04)
 
 ### Chores
