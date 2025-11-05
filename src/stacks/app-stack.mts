@@ -1,7 +1,7 @@
 import { ArchiveProvider } from '@cdktf/provider-archive/lib/provider/index.js'
 import { ProjectIamMember } from '@cdktf/provider-google/lib/project-iam-member/index.js'
 import { SecretManagerSecret } from '@cdktf/provider-google/lib/secret-manager-secret/index.js'
-// import { ServiceAccountIamMember } from '@cdktf/provider-google/lib/service-account-iam-member/index.js'
+import { ServiceAccountIamMember } from '@cdktf/provider-google/lib/service-account-iam-member/index.js'
 import { ServiceAccount } from '@cdktf/provider-google/lib/service-account/index.js'
 import { SqlUser } from '@cdktf/provider-google/lib/sql-user/index.js'
 import { Password } from '@cdktf/provider-random/lib/password/index.js'
@@ -81,6 +81,18 @@ export class AppStack extends BaseStack<AppStackConfig> {
       description: `A generated service account for project '${this.projectId}'`,
       project: this.projectId,
     })
+
+    new ServiceAccountIamMember(
+      this,
+      this.id('deployer', 'act', 'as', 'stack', 'sa'),
+      {
+        serviceAccountId: this.stackServiceAccount.id,
+        role: 'roles/iam.serviceAccountUser',
+        member: `serviceAccount:${envConfig.deployerSaEmail}`,
+        provider: this.googleProvider,
+        dependsOn: [this.stackServiceAccount],
+      },
+    )
 
     const serviceAccount = `serviceAccount:${this.stackServiceAccount.email}`
 
