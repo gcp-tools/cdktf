@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.20.8](https://github.com/gcp-tools/cdktf/compare/v1.20.7...v1.20.8) (2025-11-05)
+
+### Chores
+
+* deployer service account bindings ([7172c7d](https://github.com/gcp-tools/cdktf/commit/7172c7dc4dbcfd5ba375f9c148ea8c90a9f786c4))
+
 ## [1.20.7](https://github.com/gcp-tools/cdktf/compare/v1.20.6...v1.20.7) (2025-11-05)
 
 ### Chores
