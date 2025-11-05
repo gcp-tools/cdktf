@@ -41,6 +41,7 @@ export class IdentityPlatformInfraStack extends BaseInfraStack<IdentityPlatformI
       this,
       this.id('provider', 'google', 'identity', 'platform'),
       {
+        alias: 'identity-platform',
         project: this.appProjectId,
         billingProject: this.appProjectId,
         userProjectOverride: true,
