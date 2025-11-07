@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.20.10](https://github.com/gcp-tools/cdktf/compare/v1.20.9...v1.20.10) (2025-11-07)
+
+### Bug Fixes
+
+* removes obsolete type export ([cc84686](https://github.com/gcp-tools/cdktf/commit/cc8468626a80b5e87d22182e243e08de313155a8))
+
 ## [1.20.9](https://github.com/gcp-tools/cdktf/compare/v1.20.8...v1.20.9) (2025-11-07)
 
 ### Bug Fixes
