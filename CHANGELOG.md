@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.20.9](https://github.com/gcp-tools/cdktf/compare/v1.20.8...v1.20.9) (2025-11-07)
+
+### Bug Fixes
+
+* adds firestore index handling ([c6a8f80](https://github.com/gcp-tools/cdktf/commit/c6a8f80d739b3a706b3d22d1d9b3d3330205300d))
+
 ## [1.20.8](https://github.com/gcp-tools/cdktf/compare/v1.20.7...v1.20.8) (2025-11-05)
 
 ### Chores
