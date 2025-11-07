@@ -6,3 +6,8 @@ export * from './network-infra-stack.mjs'
 export * from './sql-infra-stack.mjs'
 export * from './firestore-infra-stack.mjs'
 export * from './ui-stack.mjs'
+
+export type {
+  FirestoreCompositeIndex,
+  FirestoreIndexField,
+} from './firestore-infra-stack.mjs'

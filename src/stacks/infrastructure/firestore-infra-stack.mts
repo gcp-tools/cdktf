@@ -1,4 +1,5 @@
 import { FirestoreDatabase } from '@cdktf/provider-google/lib/firestore-database/index.js'
+import { FirestoreIndex } from '@cdktf/provider-google/lib/firestore-index/index.js'
 /**
  * Provisions a Firestore database in the data project.
  *
@@ -31,6 +32,31 @@ import { envConfig } from '../../utils/env.mjs'
 import type { BaseStackConfig } from '../base-stack.mjs'
 import { BaseInfraStack } from './base-infra-stack.mjs'
 
+export type FirestoreIndexField =
+  | {
+      readonly fieldPath: string
+      readonly order: 'ASCENDING' | 'DESCENDING'
+    }
+  | {
+      readonly fieldPath: string
+      readonly arrayConfig: 'CONTAINS'
+    }
+
+export type FirestoreCompositeIndex = {
+  readonly id: string
+  readonly collection: string
+  readonly fields: readonly FirestoreIndexField[]
+  readonly queryScope?:
+    | 'COLLECTION'
+    | 'COLLECTION_GROUP'
+    | 'COLLECTION_RECURSIVE'
+  readonly apiScope?:
+    | 'ANY_API'
+    | 'DATASTORE_MODE_API'
+    | 'MONGODB_COMPATIBLE_API'
+  readonly database?: string
+}
+
 export type FirestoreStackConfig = BaseStackConfig & {
   name?: string
   deleteProtectionState?:
@@ -39,6 +65,7 @@ export type FirestoreStackConfig = BaseStackConfig & {
   pointInTimeRecoveryEnablement?:
     | 'POINT_IN_TIME_RECOVERY_ENABLED'
     | 'POINT_IN_TIME_RECOVERY_DISABLED'
+  indexes?: readonly FirestoreCompositeIndex[]
 }
 
 export class FirestoreInfraStack extends BaseInfraStack<FirestoreStackConfig> {
@@ -49,6 +76,7 @@ export class FirestoreInfraStack extends BaseInfraStack<FirestoreStackConfig> {
       name = '(default)',
       deleteProtectionState = 'DELETE_PROTECTION_DISABLED',
       pointInTimeRecoveryEnablement = 'POINT_IN_TIME_RECOVERY_DISABLED',
+      indexes = [],
     } = config
 
     const dataProjectState = new DataTerraformRemoteStateGcs(
@@ -74,6 +102,27 @@ export class FirestoreInfraStack extends BaseInfraStack<FirestoreStackConfig> {
         type: 'FIRESTORE_NATIVE',
       },
     )
+
+    for (const index of indexes) {
+      const resource = new FirestoreIndex(
+        this,
+        this.id('firestore', 'index', index.id),
+        {
+          apiScope: index.apiScope,
+          collection: index.collection,
+          database: index.database ?? name,
+          fields: index.fields.map((field) => ({
+            fieldPath: field.fieldPath,
+            order: 'order' in field ? field.order : undefined,
+            arrayConfig: 'arrayConfig' in field ? field.arrayConfig : undefined,
+          })),
+          project: dataProjectId,
+          queryScope: index.queryScope,
+        },
+      )
+
+      resource.node.addDependency(database)
+    }
 
     new TerraformOutput(this, 'firestore-database-project-id', {
       value: dataProjectId,

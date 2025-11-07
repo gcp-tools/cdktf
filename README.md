@@ -14,7 +14,8 @@ While you can use this library as is, it has been designed to be used with [gcp-
 ## What's Included
 
 - **Stacks** (`src/stacks/`):
-  - **Infrastructure Stacks**: VPC networking, IAM, Cloud SQL, Firestore, and UI hosting.
+  - **Infrastructure Stacks**: VPC networking, IAM, Cloud SQL, Firestore (with
+    optional composite indexes), and UI hosting.
   - **Project Stacks**: Patterns for host, data, and app project separation.
   - **App Stacks**: Application-level service composition.
   - **Ingress Stacks**: Patterns for API gateways and load balancers.
@@ -83,3 +84,26 @@ export class JobsStack extends AppStack {
     )
   }
 }
+```
+
+### Firestore Infra Stack with Composite Indexes
+
+```typescript
+import { FirestoreInfraStack } from '@gcp-tools/cdktf/stacks/infrastructure'
+import { App } from 'cdktf'
+
+const app = new App()
+
+new FirestoreInfraStack(app, {
+  indexes: [
+    {
+      id: 'users-by-tenant-email',
+      collection: 'users',
+      fields: [
+        { fieldPath: 'tenantId', order: 'ASCENDING' },
+        { fieldPath: 'email', order: 'ASCENDING' },
+      ],
+    },
+  ],
+})
+```
